@@ -58,11 +58,46 @@ public class TakaroPlugin extends JavaPlugin {
         chatListener = new ChatEventListener(this);
         playerListener = new PlayerEventListener(this);
 
-        // Register debug command
-        this.getCommandRegistry().registerCommand(new TakaroDebugCommand(this));
+        // Register events (official pattern)
+        registerEvents();
+
+        // Register debug command (official pattern)
+        this.getServer().getCommandManager().registerCommand(new TakaroDebugCommand(this));
 
         logger.info("Configuration loaded");
         logger.info("Debug command registered: /takarodebug");
+    }
+
+    /**
+     * Register event handlers using official Hytale pattern
+     */
+    private void registerEvents() {
+        try {
+            // Register chat event
+            this.getEventRegistry().registerGlobal(
+                com.hypixel.hytale.server.core.event.events.player.PlayerChatEvent.class,
+                chatListener::onPlayerChat
+            );
+            logger.info("Registered PlayerChatEvent handler");
+
+            // Register player connect event
+            this.getEventRegistry().registerGlobal(
+                com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent.class,
+                playerListener::onPlayerConnect
+            );
+            logger.info("Registered PlayerConnectEvent handler");
+
+            // Register player disconnect event
+            this.getEventRegistry().registerGlobal(
+                com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent.class,
+                playerListener::onPlayerDisconnect
+            );
+            logger.info("Registered PlayerDisconnectEvent handler");
+
+        } catch (Exception e) {
+            logger.severe("Failed to register events: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     @Override

@@ -1,5 +1,6 @@
 package dev.takaro.hytale.events;
 
+import com.hypixel.hytale.server.core.event.events.player.PlayerChatEvent;
 import dev.takaro.hytale.TakaroPlugin;
 
 import java.util.HashMap;
@@ -7,9 +8,7 @@ import java.util.Map;
 
 /**
  * Listens for chat events from Hytale and forwards them to Takaro
- *
- * TODO: This needs to be updated with actual Hytale event API once available
- * Look for: ChatEvent, PlayerChatEvent, or similar in com.hypixel.hytale.server.core.events
+ * Uses official Hytale event pattern
  */
 public class ChatEventListener {
     private final TakaroPlugin plugin;
@@ -19,38 +18,43 @@ public class ChatEventListener {
     }
 
     /**
-     * Example chat event handler - replace with actual Hytale event annotation/method
-     *
-     * In Hytale, this might look like:
-     * @EventHandler
-     * public void onPlayerChat(PlayerChatEvent event) { ... }
+     * Handle player chat events
+     * Registered via: getEventRegistry().registerGlobal(PlayerChatEvent.class, this::onPlayerChat)
      */
-    public void handleChatMessage(String playerName, String gameId, String steamId, String message, String channel) {
-        plugin.getLogger().info("[CHAT] " + playerName + ": " + message);
+    public void onPlayerChat(PlayerChatEvent event) {
+        try {
+            // Extract player data
+            String playerName = event.getPlayer().getDisplayName();
+            String uuid = event.getPlayer().getUUID().toString();
+            String message = event.getMessage();
 
-        if (!plugin.getWebSocket().isIdentified()) {
-            return;
+            plugin.getLogger().info("[CHAT] " + playerName + ": " + message);
+
+            // Don't forward if not connected to Takaro
+            if (!plugin.getWebSocket().isIdentified()) {
+                return;
+            }
+
+            // Build chat event for Takaro
+            Map<String, Object> chatData = new HashMap<>();
+            chatData.put("type", "chat-message");
+            chatData.put("msg", message);
+            chatData.put("channel", "global"); // TODO: Detect channel from event if available
+
+            Map<String, String> player = new HashMap<>();
+            player.put("name", playerName);
+            player.put("gameId", uuid);
+            player.put("steamId", uuid); // Using UUID as steamId for now
+
+            chatData.put("player", player);
+
+            // Send to Takaro
+            plugin.getWebSocket().sendGameEvent("chat-message", chatData);
+            plugin.getLogger().fine("Forwarded chat message to Takaro");
+
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error handling chat event: " + e.getMessage());
+            e.printStackTrace();
         }
-
-        // Build chat event for Takaro
-        Map<String, Object> chatData = new HashMap<>();
-        chatData.put("type", "chat-message");
-        chatData.put("msg", message);
-        chatData.put("channel", channel); // "global" or "team"
-
-        Map<String, String> player = new HashMap<>();
-        player.put("name", playerName);
-        player.put("gameId", gameId);
-        player.put("steamId", steamId);
-        chatData.put("player", player);
-
-        // Send to Takaro
-        plugin.getWebSocket().sendGameEvent("chat-message", chatData);
-    }
-
-    public void register() {
-        // TODO: Register this listener with Hytale's event system
-        // Example: plugin.getEventManager().registerListener(this);
-        plugin.getLogger().info("Chat event listener registered");
     }
 }

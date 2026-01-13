@@ -1,5 +1,7 @@
 package dev.takaro.hytale.events;
 
+import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
+import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import dev.takaro.hytale.TakaroPlugin;
 
 import java.util.HashMap;
@@ -7,9 +9,7 @@ import java.util.Map;
 
 /**
  * Listens for player events from Hytale and forwards them to Takaro
- *
- * TODO: This needs to be updated with actual Hytale event API once available
- * Look for: PlayerJoinEvent, PlayerQuitEvent, PlayerDeathEvent, etc.
+ * Uses official Hytale event pattern
  */
 public class PlayerEventListener {
     private final TakaroPlugin plugin;
@@ -19,77 +19,78 @@ public class PlayerEventListener {
     }
 
     /**
-     * Handle player connect event
-     *
-     * In Hytale, this might look like:
-     * @EventHandler
-     * public void onPlayerJoin(PlayerJoinEvent event) { ... }
+     * Handle player connect events
+     * Registered via: getEventRegistry().registerGlobal(PlayerConnectEvent.class, this::onPlayerConnect)
      */
-    public void handlePlayerConnect(String playerName, String gameId, String steamId) {
-        plugin.getLogger().info("[EVENT] Player connected: " + playerName);
+    public void onPlayerConnect(PlayerConnectEvent event) {
+        try {
+            // Extract player data
+            String playerName = event.getPlayer().getDisplayName();
+            String uuid = event.getPlayer().getUUID().toString();
 
-        if (!plugin.getWebSocket().isIdentified()) {
-            return;
+            plugin.getLogger().info("[EVENT] Player connected: " + playerName);
+
+            // Don't forward if not connected to Takaro
+            if (!plugin.getWebSocket().isIdentified()) {
+                return;
+            }
+
+            // Build connect event for Takaro
+            Map<String, Object> eventData = new HashMap<>();
+            eventData.put("type", "player-connected");
+
+            Map<String, String> player = new HashMap<>();
+            player.put("name", playerName);
+            player.put("gameId", uuid);
+            player.put("steamId", uuid); // Using UUID as steamId
+
+            eventData.put("player", player);
+
+            // Send to Takaro
+            plugin.getWebSocket().sendGameEvent("player-connected", eventData);
+            plugin.getLogger().fine("Forwarded player connect to Takaro");
+
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error handling player connect: " + e.getMessage());
+            e.printStackTrace();
         }
-
-        Map<String, Object> eventData = new HashMap<>();
-        eventData.put("type", "player-connected");
-
-        Map<String, String> player = new HashMap<>();
-        player.put("name", playerName);
-        player.put("gameId", gameId);
-        player.put("steamId", steamId);
-        eventData.put("player", player);
-
-        plugin.getWebSocket().sendGameEvent("player-connected", eventData);
     }
 
     /**
-     * Handle player disconnect event
+     * Handle player disconnect events
+     * Registered via: getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, this::onPlayerDisconnect)
      */
-    public void handlePlayerDisconnect(String playerName, String gameId, String steamId) {
-        plugin.getLogger().info("[EVENT] Player disconnected: " + playerName);
+    public void onPlayerDisconnect(PlayerDisconnectEvent event) {
+        try {
+            // Extract player data
+            String playerName = event.getPlayer().getDisplayName();
+            String uuid = event.getPlayer().getUUID().toString();
 
-        if (!plugin.getWebSocket().isIdentified()) {
-            return;
+            plugin.getLogger().info("[EVENT] Player disconnected: " + playerName);
+
+            // Don't forward if not connected to Takaro
+            if (!plugin.getWebSocket().isIdentified()) {
+                return;
+            }
+
+            // Build disconnect event for Takaro
+            Map<String, Object> eventData = new HashMap<>();
+            eventData.put("type", "player-disconnected");
+
+            Map<String, String> player = new HashMap<>();
+            player.put("name", playerName);
+            player.put("gameId", uuid);
+            player.put("steamId", uuid); // Using UUID as steamId
+
+            eventData.put("player", player);
+
+            // Send to Takaro
+            plugin.getWebSocket().sendGameEvent("player-disconnected", eventData);
+            plugin.getLogger().fine("Forwarded player disconnect to Takaro");
+
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error handling player disconnect: " + e.getMessage());
+            e.printStackTrace();
         }
-
-        Map<String, Object> eventData = new HashMap<>();
-        eventData.put("type", "player-disconnected");
-
-        Map<String, String> player = new HashMap<>();
-        player.put("name", playerName);
-        player.put("gameId", gameId);
-        player.put("steamId", steamId);
-        eventData.put("player", player);
-
-        plugin.getWebSocket().sendGameEvent("player-disconnected", eventData);
-    }
-
-    /**
-     * Handle player death event
-     */
-    public void handlePlayerDeath(String playerName, String gameId, String steamId) {
-        plugin.getLogger().info("[EVENT] Player died: " + playerName);
-
-        if (!plugin.getWebSocket().isIdentified()) {
-            return;
-        }
-
-        Map<String, Object> eventData = new HashMap<>();
-        eventData.put("type", "player-death");
-
-        Map<String, String> player = new HashMap<>();
-        player.put("name", playerName);
-        player.put("gameId", gameId);
-        player.put("steamId", steamId);
-        eventData.put("player", player);
-
-        plugin.getWebSocket().sendGameEvent("player-death", eventData);
-    }
-
-    public void register() {
-        // TODO: Register this listener with Hytale's event system
-        plugin.getLogger().info("Player event listener registered");
     }
 }
