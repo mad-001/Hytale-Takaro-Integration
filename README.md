@@ -1,6 +1,36 @@
 # Hytale-Takaro Integration Mod
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Java](https://img.shields.io/badge/Java-24+-orange.svg)](https://adoptium.net/)
+[![Hytale](https://img.shields.io/badge/Hytale-Server%20Plugin-blue.svg)](https://hytale.com/)
+[![Takaro](https://img.shields.io/badge/Takaro-Integration-green.svg)](https://takaro.dev/)
+
 A Hytale server plugin that integrates with Takaro for server management, chat relay, and player tracking.
+
+> **Note**: This plugin runs **inside** the Hytale server process (not as a separate bridge). Players don't need to install anything client-side.
+
+## 📚 Documentation
+
+- **[Installation Guide](#installation)** - How to set up the plugin
+- **[Configuration](#configuration)** - Config file options
+- **[Hytale API Integration](HYTALE_API_INTEGRATION.md)** - Complete API reference
+- **[Implementation Status](IMPLEMENTATION_STATUS.md)** - Current status & roadmap
+- **[Contributing](CONTRIBUTING.md)** - How to contribute
+
+## ⚡ Quick Start
+
+```bash
+# 1. Build the plugin
+mvn clean package
+
+# 2. Copy to your Hytale server
+cp target/HytaleTakaroMod-1.0.0.jar /path/to/hytale/plugins/
+
+# 3. Start server and edit config
+# Edit: plugins/TakaroPlugin/config.properties
+
+# 4. Restart server
+```
 
 ## Features
 
