@@ -25,8 +25,8 @@ public class PlayerEventListener {
     public void onPlayerConnect(PlayerConnectEvent event) {
         try {
             // Extract player data
-            String playerName = event.getPlayer().getDisplayName();
-            String uuid = event.getPlayer().getUUID().toString();
+            String playerName = event.getPlayerRef().getUsername();
+            String uuid = event.getPlayerRef().getUUID().toString();
 
             plugin.getLogger().info("[EVENT] Player connected: " + playerName);
 
@@ -63,8 +63,8 @@ public class PlayerEventListener {
     public void onPlayerDisconnect(PlayerDisconnectEvent event) {
         try {
             // Extract player data
-            String playerName = event.getPlayer().getDisplayName();
-            String uuid = event.getPlayer().getUUID().toString();
+            String playerName = event.getPlayerRef().getUsername();
+            String uuid = event.getPlayerRef().getUUID().toString();
 
             plugin.getLogger().info("[EVENT] Player disconnected: " + playerName);
 

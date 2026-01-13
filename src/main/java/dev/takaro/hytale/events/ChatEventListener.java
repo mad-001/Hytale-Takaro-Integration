@@ -24,9 +24,9 @@ public class ChatEventListener {
     public void onPlayerChat(PlayerChatEvent event) {
         try {
             // Extract player data
-            String playerName = event.getPlayer().getDisplayName();
-            String uuid = event.getPlayer().getUUID().toString();
-            String message = event.getMessage();
+            String playerName = event.getSender().getUsername();
+            String uuid = event.getSender().getUUID().toString();
+            String message = event.getContent();
 
             plugin.getLogger().info("[CHAT] " + playerName + ": " + message);
 

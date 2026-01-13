@@ -1,6 +1,7 @@
 package dev.takaro.hytale;
 
 import com.google.gson.JsonObject;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import dev.takaro.hytale.api.HytaleApiClient;
@@ -39,7 +40,7 @@ public class TakaroPlugin extends JavaPlugin {
         logger.info("Hytale-Takaro Integration v" + VERSION + " initializing...");
 
         // Load configuration
-        File configFile = new File(getDataFolder(), "config.properties");
+        File configFile = getDataDirectory().resolve("config.properties").toFile();
         config = new TakaroConfig(configFile);
 
         // Initialize Hytale API client
@@ -62,7 +63,7 @@ public class TakaroPlugin extends JavaPlugin {
         registerEvents();
 
         // Register debug command (official pattern)
-        this.getServer().getCommandManager().registerCommand(new TakaroDebugCommand(this));
+        HytaleServer.get().getCommandManager().registerCommand(new TakaroDebugCommand(this));
 
         logger.info("Configuration loaded");
         logger.info("Debug command registered: /takarodebug");
