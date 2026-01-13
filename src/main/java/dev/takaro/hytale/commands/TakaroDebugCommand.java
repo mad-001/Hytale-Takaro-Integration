@@ -22,7 +22,13 @@ public class TakaroDebugCommand extends CommandBase {
 
     @Override
     protected void executeSync(@Nonnull CommandContext context) {
-        String[] args = context.getArguments();
+        // Get input string and split into arguments
+        String input = context.getInputString();
+        String[] parts = input.trim().split("\\s+");
+
+        // Skip first part which is the command name itself
+        String[] args = new String[parts.length - 1];
+        System.arraycopy(parts, 1, args, 0, args.length);
 
         if (args.length == 0) {
             sendHelp(context);
@@ -124,13 +130,13 @@ public class TakaroDebugCommand extends CommandBase {
     }
 
     private void showServerMethods(CommandContext context) {
-        plugin.getLogger().info("=== Available Server Methods ===");
+        plugin.getLogger().at(java.util.logging.Level.INFO).log("=== Available Server Methods ===");
 
         try {
             // Reflect on the plugin to find server-related methods
             Class<?> pluginClass = plugin.getClass().getSuperclass(); // JavaPlugin
 
-            plugin.getLogger().info("Plugin superclass: " + pluginClass.getName());
+            plugin.getLogger().at(java.util.logging.Level.INFO).log("Plugin superclass: " + pluginClass.getName());
 
             for (Method method : pluginClass.getDeclaredMethods()) {
                 String methodName = method.getName();
@@ -138,14 +144,14 @@ public class TakaroDebugCommand extends CommandBase {
                     methodName.contains("event") || methodName.contains("Event") ||
                     methodName.contains("player") || methodName.contains("Player")) {
 
-                    plugin.getLogger().info("  - " + method.getName() + "()");
+                    plugin.getLogger().at(java.util.logging.Level.INFO).log("  - " + method.getName() + "()");
                 }
             }
 
             context.sendMessage(Message.raw("§aMethod list printed to console (check logs)"));
 
         } catch (Exception e) {
-            plugin.getLogger().severe("Error listing methods: " + e.getMessage());
+            plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error listing methods: " + e.getMessage());
             context.sendMessage(Message.raw("§cError: " + e.getMessage()));
         }
     }

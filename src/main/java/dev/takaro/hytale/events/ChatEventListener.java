@@ -25,10 +25,10 @@ public class ChatEventListener {
         try {
             // Extract player data
             String playerName = event.getSender().getUsername();
-            String uuid = event.getSender().getUUID().toString();
+            String uuid = event.getSender().getUuid().toString();
             String message = event.getContent();
 
-            plugin.getLogger().info("[CHAT] " + playerName + ": " + message);
+            plugin.getLogger().at(java.util.logging.Level.INFO).log("[CHAT] " + playerName + ": " + message);
 
             // Don't forward if not connected to Takaro
             if (!plugin.getWebSocket().isIdentified()) {
@@ -50,10 +50,10 @@ public class ChatEventListener {
 
             // Send to Takaro
             plugin.getWebSocket().sendGameEvent("chat-message", chatData);
-            plugin.getLogger().fine("Forwarded chat message to Takaro");
+            plugin.getLogger().at(java.util.logging.Level.FINE).log("Forwarded chat message to Takaro");
 
         } catch (Exception e) {
-            plugin.getLogger().severe("Error handling chat event: " + e.getMessage());
+            plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error handling chat event: " + e.getMessage());
             e.printStackTrace();
         }
     }

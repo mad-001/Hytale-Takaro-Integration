@@ -61,13 +61,13 @@ public class TakaroRequestHandler {
                     responsePayload = new Object[0];
                     break;
                 default:
-                    plugin.getLogger().warning("Unknown action: " + action);
+                    plugin.getLogger().at(java.util.logging.Level.WARNING).log("Unknown action: " + action);
                     Map<String, String> error = new HashMap<>();
                     error.put("error", "Unknown action: " + action);
                     responsePayload = error;
             }
         } catch (Exception e) {
-            plugin.getLogger().severe("Error handling " + action + ": " + e.getMessage());
+            plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error handling " + action + ": " + e.getMessage());
             e.printStackTrace();
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
@@ -89,7 +89,7 @@ public class TakaroRequestHandler {
         // Example approach:
         // 1. Get players from server: server.getOnlinePlayers()
         // 2. Enrich with Hytale API data if needed (profiles, UUIDs)
-        plugin.getLogger().info("Getting players list");
+        plugin.getLogger().at(java.util.logging.Level.INFO).log("Getting players list");
 
         try {
             // Example: Use Hytale API to enrich player data
@@ -99,7 +99,7 @@ public class TakaroRequestHandler {
             // For now, return empty until Hytale server API is integrated
             return new Object[0];
         } catch (Exception e) {
-            plugin.getLogger().severe("Error getting players: " + e.getMessage());
+            plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error getting players: " + e.getMessage());
             return new Object[0];
         }
     }
@@ -114,7 +114,7 @@ public class TakaroRequestHandler {
 
     private Object handleSendMessage(JsonObject payload) {
         // TODO: Implement sending message to game chat
-        plugin.getLogger().info("Sending message: " + payload.toString());
+        plugin.getLogger().at(java.util.logging.Level.INFO).log("Sending message: " + payload.toString());
         Map<String, Boolean> result = new HashMap<>();
         result.put("success", true);
         return result;
@@ -122,7 +122,7 @@ public class TakaroRequestHandler {
 
     private Object handleExecuteCommand(JsonObject payload) {
         // TODO: Implement command execution
-        plugin.getLogger().info("Executing command: " + payload.toString());
+        plugin.getLogger().at(java.util.logging.Level.INFO).log("Executing command: " + payload.toString());
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         result.put("rawResult", "Command executed");
@@ -131,7 +131,7 @@ public class TakaroRequestHandler {
 
     private Object handleKickPlayer(JsonObject payload) {
         // TODO: Implement player kick
-        plugin.getLogger().info("Kicking player: " + payload.toString());
+        plugin.getLogger().at(java.util.logging.Level.INFO).log("Kicking player: " + payload.toString());
         Map<String, Boolean> result = new HashMap<>();
         result.put("success", true);
         return result;
@@ -139,7 +139,7 @@ public class TakaroRequestHandler {
 
     private Object handleBanPlayer(JsonObject payload) {
         // TODO: Implement player ban
-        plugin.getLogger().info("Banning player: " + payload.toString());
+        plugin.getLogger().at(java.util.logging.Level.INFO).log("Banning player: " + payload.toString());
         Map<String, Boolean> result = new HashMap<>();
         result.put("success", true);
         return result;
@@ -147,7 +147,7 @@ public class TakaroRequestHandler {
 
     private Object handleUnbanPlayer(JsonObject payload) {
         // TODO: Implement player unban
-        plugin.getLogger().info("Unbanning player: " + payload.toString());
+        plugin.getLogger().at(java.util.logging.Level.INFO).log("Unbanning player: " + payload.toString());
         Map<String, Boolean> result = new HashMap<>();
         result.put("success", true);
         return result;
@@ -155,7 +155,7 @@ public class TakaroRequestHandler {
 
     private Object handleGetPlayerLocation(JsonObject payload) {
         // TODO: Implement player location fetching
-        plugin.getLogger().info("Getting player location: " + payload.toString());
+        plugin.getLogger().at(java.util.logging.Level.INFO).log("Getting player location: " + payload.toString());
         Map<String, Integer> location = new HashMap<>();
         location.put("x", 0);
         location.put("y", 0);
@@ -165,7 +165,7 @@ public class TakaroRequestHandler {
 
     private Object handleTeleportPlayer(JsonObject payload) {
         // TODO: Implement player teleportation
-        plugin.getLogger().info("Teleporting player: " + payload.toString());
+        plugin.getLogger().at(java.util.logging.Level.INFO).log("Teleporting player: " + payload.toString());
         Map<String, Boolean> result = new HashMap<>();
         result.put("success", true);
         return result;

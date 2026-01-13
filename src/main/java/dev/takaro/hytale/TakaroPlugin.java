@@ -17,7 +17,6 @@ import java.io.File;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
 
 public class TakaroPlugin extends JavaPlugin {
     private static final String VERSION = "1.0.0";
@@ -28,16 +27,14 @@ public class TakaroPlugin extends JavaPlugin {
     private ChatEventListener chatListener;
     private PlayerEventListener playerListener;
     private ScheduledExecutorService telemetryScheduler;
-    private Logger logger;
 
     public TakaroPlugin(@Nonnull JavaPluginInit init) {
         super(init);
-        this.logger = getLogger();
     }
 
     @Override
     protected void setup() {
-        logger.info("Hytale-Takaro Integration v" + VERSION + " initializing...");
+        getLogger().at(java.util.logging.Level.INFO).log("Hytale-Takaro Integration v" + VERSION + " initializing...");
 
         // Load configuration
         File configFile = getDataDirectory().resolve("config.properties").toFile();
@@ -47,9 +44,9 @@ public class TakaroPlugin extends JavaPlugin {
         hytaleApi = new HytaleApiClient(this, config.getHytaleApiUrl());
         if (!config.getHytaleApiToken().isEmpty()) {
             hytaleApi.setAuthToken(config.getHytaleApiToken());
-            logger.info("Hytale API client initialized");
+            getLogger().at(java.util.logging.Level.INFO).log("Hytale API client initialized");
         } else {
-            logger.warning("No Hytale API token configured - some features may be limited");
+            getLogger().at(java.util.logging.Level.WARNING).log("No Hytale API token configured - some features may be limited");
         }
 
         // Initialize request handler
@@ -63,10 +60,10 @@ public class TakaroPlugin extends JavaPlugin {
         registerEvents();
 
         // Register debug command (official pattern)
-        HytaleServer.get().getCommandManager().registerCommand(new TakaroDebugCommand(this));
+        HytaleServer.get().getCommandManager().register(new TakaroDebugCommand(this));
 
-        logger.info("Configuration loaded");
-        logger.info("Debug command registered: /takarodebug");
+        getLogger().at(java.util.logging.Level.INFO).log("Configuration loaded");
+        getLogger().at(java.util.logging.Level.INFO).log("Debug command registered: /takarodebug");
     }
 
     /**
@@ -79,24 +76,24 @@ public class TakaroPlugin extends JavaPlugin {
                 com.hypixel.hytale.server.core.event.events.player.PlayerChatEvent.class,
                 chatListener::onPlayerChat
             );
-            logger.info("Registered PlayerChatEvent handler");
+            getLogger().at(java.util.logging.Level.INFO).log("Registered PlayerChatEvent handler");
 
             // Register player connect event
             this.getEventRegistry().registerGlobal(
                 com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent.class,
                 playerListener::onPlayerConnect
             );
-            logger.info("Registered PlayerConnectEvent handler");
+            getLogger().at(java.util.logging.Level.INFO).log("Registered PlayerConnectEvent handler");
 
             // Register player disconnect event
             this.getEventRegistry().registerGlobal(
                 com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent.class,
                 playerListener::onPlayerDisconnect
             );
-            logger.info("Registered PlayerDisconnectEvent handler");
+            getLogger().at(java.util.logging.Level.INFO).log("Registered PlayerDisconnectEvent handler");
 
         } catch (Exception e) {
-            logger.severe("Failed to register events: " + e.getMessage());
+            getLogger().at(java.util.logging.Level.SEVERE).log("Failed to register events: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -104,14 +101,14 @@ public class TakaroPlugin extends JavaPlugin {
     @Override
     protected void start() {
         super.start();
-        logger.info("Starting Takaro WebSocket connection...");
+        getLogger().at(java.util.logging.Level.INFO).log("Starting Takaro WebSocket connection...");
 
         try {
             webSocket = new TakaroWebSocket(this, config);
             webSocket.connect();
-            logger.info("Connecting to Takaro at " + config.getWsUrl());
+            getLogger().at(java.util.logging.Level.INFO).log("Connecting to Takaro at " + config.getWsUrl());
         } catch (Exception e) {
-            logger.severe("Failed to start WebSocket connection: " + e.getMessage());
+            getLogger().at(java.util.logging.Level.SEVERE).log("Failed to start WebSocket connection: " + e.getMessage());
             e.printStackTrace();
         }
 
@@ -119,7 +116,7 @@ public class TakaroPlugin extends JavaPlugin {
         if (!config.getHytaleApiToken().isEmpty()) {
             telemetryScheduler = Executors.newSingleThreadScheduledExecutor();
             telemetryScheduler.scheduleAtFixedRate(this::reportTelemetry, 1, 5, TimeUnit.MINUTES);
-            logger.info("Started Hytale telemetry reporting");
+            getLogger().at(java.util.logging.Level.INFO).log("Started Hytale telemetry reporting");
         }
     }
 
@@ -133,16 +130,16 @@ public class TakaroPlugin extends JavaPlugin {
             metadata.addProperty("version", VERSION);
 
             hytaleApi.reportTelemetry(playerCount, "online", metadata);
-            logger.fine("Telemetry reported to Hytale API");
+            getLogger().at(java.util.logging.Level.FINE).log("Telemetry reported to Hytale API");
         } catch (Exception e) {
-            logger.warning("Failed to report telemetry: " + e.getMessage());
+            getLogger().at(java.util.logging.Level.WARNING).log("Failed to report telemetry: " + e.getMessage());
         }
     }
 
     @Override
     protected void shutdown() {
         super.shutdown();
-        logger.info("Shutting down Takaro integration...");
+        getLogger().at(java.util.logging.Level.INFO).log("Shutting down Takaro integration...");
 
         if (telemetryScheduler != null) {
             telemetryScheduler.shutdownNow();

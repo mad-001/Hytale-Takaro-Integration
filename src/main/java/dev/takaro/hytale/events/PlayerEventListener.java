@@ -26,9 +26,9 @@ public class PlayerEventListener {
         try {
             // Extract player data
             String playerName = event.getPlayerRef().getUsername();
-            String uuid = event.getPlayerRef().getUUID().toString();
+            String uuid = event.getPlayerRef().getUuid().toString();
 
-            plugin.getLogger().info("[EVENT] Player connected: " + playerName);
+            plugin.getLogger().at(java.util.logging.Level.INFO).log("[EVENT] Player connected: " + playerName);
 
             // Don't forward if not connected to Takaro
             if (!plugin.getWebSocket().isIdentified()) {
@@ -48,10 +48,10 @@ public class PlayerEventListener {
 
             // Send to Takaro
             plugin.getWebSocket().sendGameEvent("player-connected", eventData);
-            plugin.getLogger().fine("Forwarded player connect to Takaro");
+            plugin.getLogger().at(java.util.logging.Level.FINE).log("Forwarded player connect to Takaro");
 
         } catch (Exception e) {
-            plugin.getLogger().severe("Error handling player connect: " + e.getMessage());
+            plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error handling player connect: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -64,9 +64,9 @@ public class PlayerEventListener {
         try {
             // Extract player data
             String playerName = event.getPlayerRef().getUsername();
-            String uuid = event.getPlayerRef().getUUID().toString();
+            String uuid = event.getPlayerRef().getUuid().toString();
 
-            plugin.getLogger().info("[EVENT] Player disconnected: " + playerName);
+            plugin.getLogger().at(java.util.logging.Level.INFO).log("[EVENT] Player disconnected: " + playerName);
 
             // Don't forward if not connected to Takaro
             if (!plugin.getWebSocket().isIdentified()) {
@@ -86,10 +86,10 @@ public class PlayerEventListener {
 
             // Send to Takaro
             plugin.getWebSocket().sendGameEvent("player-disconnected", eventData);
-            plugin.getLogger().fine("Forwarded player disconnect to Takaro");
+            plugin.getLogger().at(java.util.logging.Level.FINE).log("Forwarded player disconnect to Takaro");
 
         } catch (Exception e) {
-            plugin.getLogger().severe("Error handling player disconnect: " + e.getMessage());
+            plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error handling player disconnect: " + e.getMessage());
             e.printStackTrace();
         }
     }

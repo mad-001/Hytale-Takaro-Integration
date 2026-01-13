@@ -33,7 +33,7 @@ public class TakaroWebSocket extends WebSocketClient {
 
     @Override
     public void onOpen(ServerHandshake handshake) {
-        plugin.getLogger().info("Connected to Takaro WebSocket");
+        plugin.getLogger().at(java.util.logging.Level.INFO).log("Connected to Takaro WebSocket");
         reconnectAttempts = 0;
         sendIdentify();
     }
@@ -49,7 +49,7 @@ public class TakaroWebSocket extends WebSocketClient {
                     handleIdentifyResponse(json);
                     break;
                 case "connected":
-                    plugin.getLogger().info("Takaro confirmed connection");
+                    plugin.getLogger().at(java.util.logging.Level.INFO).log("Takaro confirmed connection");
                     break;
                 case "request":
                     handleTakaroRequest(json);
@@ -58,27 +58,27 @@ public class TakaroWebSocket extends WebSocketClient {
                     sendPong();
                     break;
                 case "error":
-                    plugin.getLogger().severe("Takaro error: " + json.toString());
+                    plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Takaro error: " + json.toString());
                     break;
                 default:
-                    plugin.getLogger().warning("Unknown message type from Takaro: " + type);
+                    plugin.getLogger().at(java.util.logging.Level.WARNING).log("Unknown message type from Takaro: " + type);
             }
         } catch (Exception e) {
-            plugin.getLogger().severe("Error handling message: " + e.getMessage());
+            plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error handling message: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
     @Override
     public void onClose(int code, String reason, boolean remote) {
-        plugin.getLogger().warning("Disconnected from Takaro: " + reason);
+        plugin.getLogger().at(java.util.logging.Level.WARNING).log("Disconnected from Takaro: " + reason);
         isIdentified = false;
         scheduleReconnect();
     }
 
     @Override
     public void onError(Exception ex) {
-        plugin.getLogger().severe("Takaro WebSocket error: " + ex.getMessage());
+        plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Takaro WebSocket error: " + ex.getMessage());
         ex.printStackTrace();
     }
 
@@ -94,16 +94,16 @@ public class TakaroWebSocket extends WebSocketClient {
 
         identify.put("payload", payload);
 
-        plugin.getLogger().info("Sending identify message to Takaro");
+        plugin.getLogger().at(java.util.logging.Level.INFO).log("Sending identify message to Takaro");
         send(gson.toJson(identify));
     }
 
     private void handleIdentifyResponse(JsonObject message) {
         JsonObject payload = message.getAsJsonObject("payload");
         if (payload.has("error")) {
-            plugin.getLogger().severe("Identification failed: " + payload.get("error").toString());
+            plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Identification failed: " + payload.get("error").toString());
         } else {
-            plugin.getLogger().info("Successfully identified with Takaro");
+            plugin.getLogger().at(java.util.logging.Level.INFO).log("Successfully identified with Takaro");
             isIdentified = true;
         }
     }
@@ -113,7 +113,7 @@ public class TakaroWebSocket extends WebSocketClient {
         JsonObject payload = message.getAsJsonObject("payload");
         String action = payload.get("action").getAsString();
 
-        plugin.getLogger().info("Received Takaro request: " + action);
+        plugin.getLogger().at(java.util.logging.Level.INFO).log("Received Takaro request: " + action);
 
         // Delegate to plugin's request handler
         plugin.handleTakaroRequest(requestId, action, payload);
@@ -127,7 +127,7 @@ public class TakaroWebSocket extends WebSocketClient {
 
     public void sendToTakaro(Map<String, Object> message) {
         if (!isOpen()) {
-            plugin.getLogger().warning("Cannot send to Takaro - not connected");
+            plugin.getLogger().at(java.util.logging.Level.WARNING).log("Cannot send to Takaro - not connected");
             return;
         }
         send(gson.toJson(message));
@@ -163,14 +163,14 @@ public class TakaroWebSocket extends WebSocketClient {
         int jitter = (int)(Math.random() * exponentialDelay * 0.25);
         int delayMs = exponentialDelay + jitter;
 
-        plugin.getLogger().info("Scheduling reconnect attempt " + reconnectAttempts + " in " + (delayMs / 1000) + "s");
+        plugin.getLogger().at(java.util.logging.Level.INFO).log("Scheduling reconnect attempt " + reconnectAttempts + " in " + (delayMs / 1000) + "s");
 
         scheduler.schedule(() -> {
-            plugin.getLogger().info("Attempting to reconnect to Takaro...");
+            plugin.getLogger().at(java.util.logging.Level.INFO).log("Attempting to reconnect to Takaro...");
             try {
                 reconnect();
             } catch (Exception e) {
-                plugin.getLogger().severe("Reconnect failed: " + e.getMessage());
+                plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Reconnect failed: " + e.getMessage());
             }
         }, delayMs, TimeUnit.MILLISECONDS);
     }

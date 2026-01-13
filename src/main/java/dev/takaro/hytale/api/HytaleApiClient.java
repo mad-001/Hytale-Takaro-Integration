@@ -64,7 +64,7 @@ public class HytaleApiClient {
 
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                plugin.getLogger().warning("Player lookup failed: " + response.code());
+                plugin.getLogger().at(java.util.logging.Level.WARNING).log("Player lookup failed: " + response.code());
                 return null;
             }
             return gson.fromJson(response.body().string(), JsonObject.class);
@@ -83,7 +83,7 @@ public class HytaleApiClient {
 
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                plugin.getLogger().warning("Player lookup failed: " + response.code());
+                plugin.getLogger().at(java.util.logging.Level.WARNING).log("Player lookup failed: " + response.code());
                 return null;
             }
             return gson.fromJson(response.body().string(), JsonObject.class);
@@ -105,7 +105,7 @@ public class HytaleApiClient {
 
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                plugin.getLogger().warning("Bulk lookup failed: " + response.code());
+                plugin.getLogger().at(java.util.logging.Level.WARNING).log("Bulk lookup failed: " + response.code());
                 return null;
             }
             return gson.fromJson(response.body().string(), JsonObject.class);
@@ -124,7 +124,7 @@ public class HytaleApiClient {
 
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                plugin.getLogger().warning("Version check failed: " + response.code());
+                plugin.getLogger().at(java.util.logging.Level.WARNING).log("Version check failed: " + response.code());
                 return null;
             }
             return gson.fromJson(response.body().string(), JsonObject.class);
@@ -144,7 +144,7 @@ public class HytaleApiClient {
 
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                plugin.getLogger().warning("Profile fetch failed: " + response.code());
+                plugin.getLogger().at(java.util.logging.Level.WARNING).log("Profile fetch failed: " + response.code());
                 return null;
             }
             return gson.fromJson(response.body().string(), JsonObject.class);
@@ -171,7 +171,7 @@ public class HytaleApiClient {
 
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                plugin.getLogger().warning("Telemetry report failed: " + response.code());
+                plugin.getLogger().at(java.util.logging.Level.WARNING).log("Telemetry report failed: " + response.code());
                 return false;
             }
             return true;
@@ -196,7 +196,7 @@ public class HytaleApiClient {
 
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                plugin.getLogger().warning("Player report failed: " + response.code());
+                plugin.getLogger().at(java.util.logging.Level.WARNING).log("Player report failed: " + response.code());
                 return false;
             }
             return true;
@@ -222,7 +222,7 @@ public class HytaleApiClient {
 
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                plugin.getLogger().warning("Payment processing failed: " + response.code());
+                plugin.getLogger().at(java.util.logging.Level.WARNING).log("Payment processing failed: " + response.code());
                 return null;
             }
             return gson.fromJson(response.body().string(), JsonObject.class);
@@ -244,10 +244,10 @@ public class HytaleApiClient {
             if (!response.isSuccessful()) {
                 if (response.code() == 404) {
                     // Endpoint not yet available
-                    plugin.getLogger().info("Global sanctions endpoint not yet available");
+                    plugin.getLogger().at(java.util.logging.Level.INFO).log("Global sanctions endpoint not yet available");
                     return null;
                 }
-                plugin.getLogger().warning("Sanctions check failed: " + response.code());
+                plugin.getLogger().at(java.util.logging.Level.WARNING).log("Sanctions check failed: " + response.code());
                 return null;
             }
             return gson.fromJson(response.body().string(), JsonObject.class);
@@ -269,10 +269,10 @@ public class HytaleApiClient {
             if (!response.isSuccessful()) {
                 if (response.code() == 404) {
                     // Endpoint not yet available
-                    plugin.getLogger().info("Friends list endpoint not yet available");
+                    plugin.getLogger().at(java.util.logging.Level.INFO).log("Friends list endpoint not yet available");
                     return null;
                 }
-                plugin.getLogger().warning("Friends list fetch failed: " + response.code());
+                plugin.getLogger().at(java.util.logging.Level.WARNING).log("Friends list fetch failed: " + response.code());
                 return null;
             }
             return gson.fromJson(response.body().string(), JsonObject.class);
@@ -298,10 +298,10 @@ public class HytaleApiClient {
             if (!response.isSuccessful()) {
                 if (response.code() == 404) {
                     // Endpoint not yet available
-                    plugin.getLogger().info("Webhook subscription endpoint not yet available");
+                    plugin.getLogger().at(java.util.logging.Level.INFO).log("Webhook subscription endpoint not yet available");
                     return false;
                 }
-                plugin.getLogger().warning("Webhook subscription failed: " + response.code());
+                plugin.getLogger().at(java.util.logging.Level.WARNING).log("Webhook subscription failed: " + response.code());
                 return false;
             }
             return true;
