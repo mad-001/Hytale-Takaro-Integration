@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import dev.takaro.hytale.api.HytaleApiClient;
+import dev.takaro.hytale.commands.TakaroDebugCommand;
 import dev.takaro.hytale.config.TakaroConfig;
 import dev.takaro.hytale.events.ChatEventListener;
 import dev.takaro.hytale.events.PlayerEventListener;
@@ -57,7 +58,11 @@ public class TakaroPlugin extends JavaPlugin {
         chatListener = new ChatEventListener(this);
         playerListener = new PlayerEventListener(this);
 
+        // Register debug command
+        this.getCommandRegistry().registerCommand(new TakaroDebugCommand(this));
+
         logger.info("Configuration loaded");
+        logger.info("Debug command registered: /takarodebug");
     }
 
     @Override
@@ -126,5 +131,9 @@ public class TakaroPlugin extends JavaPlugin {
 
     public TakaroConfig getConfig() {
         return config;
+    }
+
+    public String getVersion() {
+        return VERSION;
     }
 }
