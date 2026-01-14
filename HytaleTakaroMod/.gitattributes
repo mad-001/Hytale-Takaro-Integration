@@ -1,0 +1,39 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Java sources
+*.java text diff=java
+*.gradle text diff=java
+*.gradle.kts text diff=java
+
+# Maven
+pom.xml text
+
+# Documentation
+*.md text
+*.txt text
+*.adoc text
+
+# Properties files
+*.properties text
+
+# Shell scripts
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Windows scripts
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# JSON/YAML
+*.json text
+*.yml text
+*.yaml text
+
+# Binary files
+*.jar binary
+*.class binary
+*.so binary
+*.dll binary
+*.dylib binary
