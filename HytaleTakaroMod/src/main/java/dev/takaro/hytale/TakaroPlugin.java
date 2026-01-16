@@ -19,11 +19,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class TakaroPlugin extends JavaPlugin {
-    private static final String VERSION = "1.0.0";
+    private static final String VERSION = "1.3.0";
     private TakaroConfig config;
     private TakaroWebSocket webSocket;
     private TakaroRequestHandler requestHandler;
-    private HytaleApiClient hytaleApi;
+    private HytaleApiClient hytaleApi; // Hidden feature - not in user config yet
     private ChatEventListener chatListener;
     private PlayerEventListener playerListener;
     private ScheduledExecutorService telemetryScheduler;
@@ -40,13 +40,11 @@ public class TakaroPlugin extends JavaPlugin {
         File configFile = getDataDirectory().resolve("config.properties").toFile();
         config = new TakaroConfig(configFile);
 
-        // Initialize Hytale API client
+        // Initialize Hytale API client (hidden feature - optional)
         hytaleApi = new HytaleApiClient(this, config.getHytaleApiUrl());
         if (!config.getHytaleApiToken().isEmpty()) {
             hytaleApi.setAuthToken(config.getHytaleApiToken());
             getLogger().at(java.util.logging.Level.INFO).log("Hytale API client initialized");
-        } else {
-            getLogger().at(java.util.logging.Level.WARNING).log("No Hytale API token configured - some features may be limited");
         }
 
         // Initialize request handler
@@ -103,6 +101,15 @@ public class TakaroPlugin extends JavaPlugin {
         super.start();
         getLogger().at(java.util.logging.Level.INFO).log("Starting Takaro WebSocket connection...");
 
+        // Check if items are loaded
+        try {
+            com.hypixel.hytale.server.core.asset.type.item.config.Item.getAssetMap();
+            int itemCount = com.hypixel.hytale.server.core.asset.type.item.config.Item.getAssetMap().getAssetMap().size();
+            getLogger().at(java.util.logging.Level.INFO).log("Items loaded: " + itemCount + " items available");
+        } catch (Exception e) {
+            getLogger().at(java.util.logging.Level.WARNING).log("Could not check items at startup: " + e.getMessage());
+        }
+
         try {
             webSocket = new TakaroWebSocket(this, config);
             webSocket.connect();
@@ -112,7 +119,7 @@ public class TakaroPlugin extends JavaPlugin {
             e.printStackTrace();
         }
 
-        // Start telemetry reporting to Hytale API (every 5 minutes)
+        // Start telemetry reporting to Hytale API (optional - only if token configured)
         if (!config.getHytaleApiToken().isEmpty()) {
             telemetryScheduler = Executors.newSingleThreadScheduledExecutor();
             telemetryScheduler.scheduleAtFixedRate(this::reportTelemetry, 1, 5, TimeUnit.MINUTES);

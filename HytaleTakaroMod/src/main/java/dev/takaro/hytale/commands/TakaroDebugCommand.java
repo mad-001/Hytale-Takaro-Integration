@@ -71,13 +71,16 @@ public class TakaroDebugCommand extends CommandBase {
         context.sendMessage(Message.raw("§a=== Takaro Integration Info ==="));
         context.sendMessage(Message.raw("§7Plugin Version: §e" + plugin.getVersion()));
         context.sendMessage(Message.raw("§7Takaro WS URL: §e" + plugin.getConfig().getWsUrl()));
-        context.sendMessage(Message.raw("§7Hytale API URL: §e" + plugin.getConfig().getHytaleApiUrl()));
 
         boolean hasTakaroToken = !plugin.getConfig().getIdentityToken().isEmpty();
         boolean hasHytaleToken = !plugin.getConfig().getHytaleApiToken().isEmpty();
 
-        context.sendMessage(Message.raw("§7Takaro Token: " + (hasTakaroToken ? "§aConfigured" : "§cMissing")));
-        context.sendMessage(Message.raw("§7Hytale API Token: " + (hasHytaleToken ? "§aConfigured" : "§cMissing")));
+        context.sendMessage(Message.raw("§7Identity Token: " + (hasTakaroToken ? "§aConfigured" : "§cMissing")));
+
+        // Show Hytale API status (hidden feature - not documented yet)
+        if (hasHytaleToken) {
+            context.sendMessage(Message.raw("§7Hytale API: §aEnabled (hidden feature)"));
+        }
     }
 
     private void showServerInfo(CommandContext context) {

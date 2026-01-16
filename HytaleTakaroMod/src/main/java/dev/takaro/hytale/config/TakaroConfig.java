@@ -26,21 +26,16 @@ public class TakaroConfig {
     }
 
     private void createDefault() {
-        properties.setProperty("TAKARO_WS_URL", "wss://connect.takaro.io/");
-        properties.setProperty("IDENTITY_TOKEN", "");
+        properties.setProperty("IDENTITY_TOKEN", "MyHytaleServer");
         properties.setProperty("REGISTRATION_TOKEN", "");
-        properties.setProperty("HYTALE_API_URL", "https://api.hytale.com");
-        properties.setProperty("HYTALE_API_TOKEN", "");
 
         try {
             configFile.getParentFile().mkdirs();
             try (FileOutputStream fos = new FileOutputStream(configFile)) {
                 properties.store(fos, "Takaro Integration Configuration\n" +
-                    "# Takaro Settings\n" +
-                    "# IDENTITY_TOKEN and REGISTRATION_TOKEN from Takaro dashboard\n" +
                     "# \n" +
-                    "# Hytale API Settings\n" +
-                    "# HYTALE_API_TOKEN is your authenticated server token from Hytale");
+                    "# IDENTITY_TOKEN: Choose a name for your server (e.g., MyHytaleServer, SurvivalServer, etc.)\n" +
+                    "# REGISTRATION_TOKEN: Get this from Takaro dashboard (Settings → Game Servers → Add Server → Generic)\n");
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -48,7 +43,8 @@ public class TakaroConfig {
     }
 
     public String getWsUrl() {
-        return properties.getProperty("TAKARO_WS_URL", "wss://connect.takaro.io/");
+        // Hardcoded - users don't configure this
+        return "wss://connect.takaro.io/";
     }
 
     public String getIdentityToken() {
@@ -59,6 +55,7 @@ public class TakaroConfig {
         return properties.getProperty("REGISTRATION_TOKEN", "");
     }
 
+    // Hidden from default config - will be used when Hytale API is available
     public String getHytaleApiUrl() {
         return properties.getProperty("HYTALE_API_URL", "https://api.hytale.com");
     }

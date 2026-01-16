@@ -39,9 +39,8 @@ public class ChatEventListener {
                 return;
             }
 
-            // Build chat event for Takaro
+            // Build chat event for Takaro (don't include "type" - that's added by sendGameEvent)
             Map<String, Object> chatData = new HashMap<>();
-            chatData.put("type", "chat-message");
             chatData.put("msg", message);
             chatData.put("channel", "global"); // TODO: Detect channel from event if available
 

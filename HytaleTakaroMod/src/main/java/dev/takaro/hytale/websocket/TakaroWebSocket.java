@@ -154,6 +154,11 @@ public class TakaroWebSocket extends WebSocketClient {
         payload.put("data", data);
 
         event.put("payload", payload);
+
+        // Log the exact JSON being sent
+        String json = gson.toJson(event);
+        plugin.getLogger().at(java.util.logging.Level.INFO).log("Sending JSON: " + json);
+
         sendToTakaro(event);
     }
 

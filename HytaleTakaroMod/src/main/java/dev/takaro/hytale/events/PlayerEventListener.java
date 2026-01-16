@@ -13,6 +13,8 @@ import java.util.Map;
  */
 public class PlayerEventListener {
     private final TakaroPlugin plugin;
+    private final Map<String, Long> lastDisconnectTime = new HashMap<>();
+    private static final long DISCONNECT_COOLDOWN_MS = 5000; // 5 seconds
 
     public PlayerEventListener(TakaroPlugin plugin) {
         this.plugin = plugin;
@@ -20,7 +22,6 @@ public class PlayerEventListener {
 
     /**
      * Handle player connect events
-     * Registered via: getEventRegistry().registerGlobal(PlayerConnectEvent.class, this::onPlayerConnect)
      */
     public void onPlayerConnect(PlayerConnectEvent event) {
         try {
@@ -37,7 +38,6 @@ public class PlayerEventListener {
 
             // Build connect event for Takaro
             Map<String, Object> eventData = new HashMap<>();
-            eventData.put("type", "player-connected");
 
             Map<String, String> player = new HashMap<>();
             player.put("name", playerName);
@@ -58,7 +58,6 @@ public class PlayerEventListener {
 
     /**
      * Handle player disconnect events
-     * Registered via: getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, this::onPlayerDisconnect)
      */
     public void onPlayerDisconnect(PlayerDisconnectEvent event) {
         try {
@@ -68,6 +67,15 @@ public class PlayerEventListener {
 
             plugin.getLogger().at(java.util.logging.Level.INFO).log("[EVENT] Player disconnected: " + playerName);
 
+            // Deduplicate - Hytale fires PlayerDisconnectEvent multiple times
+            long currentTime = System.currentTimeMillis();
+            Long lastTime = lastDisconnectTime.get(uuid);
+            if (lastTime != null && (currentTime - lastTime) < DISCONNECT_COOLDOWN_MS) {
+                plugin.getLogger().at(java.util.logging.Level.INFO).log("Ignoring duplicate disconnect event for: " + playerName);
+                return;
+            }
+            lastDisconnectTime.put(uuid, currentTime);
+
             // Don't forward if not connected to Takaro
             if (!plugin.getWebSocket().isIdentified()) {
                 return;
@@ -75,7 +83,6 @@ public class PlayerEventListener {
 
             // Build disconnect event for Takaro
             Map<String, Object> eventData = new HashMap<>();
-            eventData.put("type", "player-disconnected");
 
             Map<String, String> player = new HashMap<>();
             player.put("name", playerName);
@@ -85,8 +92,9 @@ public class PlayerEventListener {
             eventData.put("player", player);
 
             // Send to Takaro
+            plugin.getLogger().at(java.util.logging.Level.INFO).log("Sending disconnect event for " + playerName + " to Takaro");
             plugin.getWebSocket().sendGameEvent("player-disconnected", eventData);
-            plugin.getLogger().at(java.util.logging.Level.FINE).log("Forwarded player disconnect to Takaro");
+            plugin.getLogger().at(java.util.logging.Level.INFO).log("Disconnect event sent successfully");
 
         } catch (Exception e) {
             plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error handling player disconnect: " + e.getMessage());
