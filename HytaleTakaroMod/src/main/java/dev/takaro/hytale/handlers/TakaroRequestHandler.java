@@ -95,6 +95,10 @@ public class TakaroRequestHandler {
                 case "listItems":
                     responsePayload = handleListItems();
                     break;
+                case "getPlayerBedLocation":
+                case "getPlayerBeds":
+                    responsePayload = handleGetPlayerBedLocation(payload);
+                    break;
                 case "listBans":
                 case "listEntities":
                 case "listLocations":
@@ -1051,6 +1055,202 @@ public class TakaroRequestHandler {
         }
     }
 
+    private Object handleGetPlayerBedLocation(JsonObject payload) {
+        try {
+            String argsString = payload.get("args").getAsString();
+            JsonObject args = gson.fromJson(argsString, JsonObject.class);
+
+            // Try to get gameId from args first, then fall back to top-level payload
+            String gameId;
+            if (args.has("gameId")) {
+                gameId = args.get("gameId").getAsString();
+            } else if (payload.has("playerId")) {
+                gameId = payload.get("playerId").getAsString();
+            } else if (payload.has("gameId")) {
+                gameId = payload.get("gameId").getAsString();
+            } else {
+                plugin.getLogger().at(java.util.logging.Level.WARNING).log("No gameId or playerId provided");
+                return new Object[0];
+            }
+
+            plugin.getLogger().at(java.util.logging.Level.INFO).log("Getting bed locations for player: " + gameId);
+
+            com.hypixel.hytale.server.core.universe.Universe universe =
+                com.hypixel.hytale.server.core.universe.Universe.get();
+
+            if (universe == null) {
+                plugin.getLogger().at(java.util.logging.Level.WARNING).log("Universe is null");
+                return new Object[0];
+            }
+
+            UUID playerUuid = UUID.fromString(gameId);
+            PlayerRef playerRef = universe.getPlayers().stream()
+                .filter(p -> p.getUuid().equals(playerUuid))
+                .findFirst()
+                .orElse(null);
+
+            if (playerRef == null) {
+                plugin.getLogger().at(java.util.logging.Level.WARNING).log("Player not found: " + gameId);
+                return new Object[0];
+            }
+
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref == null || !ref.isValid()) {
+                plugin.getLogger().at(java.util.logging.Level.WARNING).log("Player reference not valid: " + gameId);
+                return new Object[0];
+            }
+
+            Store<EntityStore> store = ref.getStore();
+            World world = store.getExternalData().getWorld();
+
+            // Access player bed locations on the world thread
+            List<Map<String, Object>> bedLocations = new ArrayList<>();
+            CompletableFuture<Void> future = new CompletableFuture<>();
+
+            world.execute(() -> {
+                try {
+                    Player player = store.getComponent(ref, Player.getComponentType());
+                    if (player == null) {
+                        plugin.getLogger().at(java.util.logging.Level.WARNING).log("Player component not found: " + gameId);
+                        future.complete(null);
+                        return;
+                    }
+
+                    // Get player configuration data
+                    Object playerConfigData = player.getPlayerConfigData();
+                    if (playerConfigData == null) {
+                        plugin.getLogger().at(java.util.logging.Level.WARNING).log("PlayerConfigData is null");
+                        future.complete(null);
+                        return;
+                    }
+
+                    // Use reflection to access PlayerConfigData methods
+                    try {
+                        // Get per-world data
+                        java.lang.reflect.Method getPerWorldDataMethod =
+                            playerConfigData.getClass().getMethod("getPerWorldData", String.class);
+                        Object playerWorldData = getPerWorldDataMethod.invoke(playerConfigData, world.getName());
+
+                        if (playerWorldData == null) {
+                            plugin.getLogger().at(java.util.logging.Level.INFO).log("No world data for " + world.getName());
+                            future.complete(null);
+                            return;
+                        }
+
+                        // Get respawn points array
+                        java.lang.reflect.Method getRespawnPointsMethod =
+                            playerWorldData.getClass().getMethod("getRespawnPoints");
+                        Object[] respawnPoints = (Object[]) getRespawnPointsMethod.invoke(playerWorldData);
+
+                        if (respawnPoints == null || respawnPoints.length == 0) {
+                            plugin.getLogger().at(java.util.logging.Level.INFO).log("No respawn points found for player");
+                            future.complete(null);
+                            return;
+                        }
+
+                        // Extract bed information from each respawn point
+                        for (Object respawnPoint : respawnPoints) {
+                            try {
+                                // Get block position (Vector3i)
+                                java.lang.reflect.Method getBlockPositionMethod =
+                                    respawnPoint.getClass().getMethod("getBlockPosition");
+                                Object blockPosition = getBlockPositionMethod.invoke(respawnPoint);
+
+                                // Get respawn position (Vector3d)
+                                java.lang.reflect.Method getRespawnPositionMethod =
+                                    respawnPoint.getClass().getMethod("getRespawnPosition");
+                                Object respawnPosition = getRespawnPositionMethod.invoke(respawnPoint);
+
+                                // Get bed name (String)
+                                java.lang.reflect.Method getNameMethod =
+                                    respawnPoint.getClass().getMethod("getName");
+                                String bedName = (String) getNameMethod.invoke(respawnPoint);
+
+                                // Extract coordinates from Vector3i (block position)
+                                java.lang.reflect.Method getXMethod = blockPosition.getClass().getMethod("getX");
+                                java.lang.reflect.Method getYMethod = blockPosition.getClass().getMethod("getY");
+                                java.lang.reflect.Method getZMethod = blockPosition.getClass().getMethod("getZ");
+
+                                int blockX = (int) getXMethod.invoke(blockPosition);
+                                int blockY = (int) getYMethod.invoke(blockPosition);
+                                int blockZ = (int) getZMethod.invoke(blockPosition);
+
+                                // Extract coordinates from Vector3d (spawn position)
+                                java.lang.reflect.Method getXDoubleMethod = respawnPosition.getClass().getMethod("getX");
+                                java.lang.reflect.Method getYDoubleMethod = respawnPosition.getClass().getMethod("getY");
+                                java.lang.reflect.Method getZDoubleMethod = respawnPosition.getClass().getMethod("getZ");
+
+                                double spawnX = (double) getXDoubleMethod.invoke(respawnPosition);
+                                double spawnY = (double) getYDoubleMethod.invoke(respawnPosition);
+                                double spawnZ = (double) getZDoubleMethod.invoke(respawnPosition);
+
+                                // Create bed location entry
+                                Map<String, Object> bedLocation = new HashMap<>();
+                                bedLocation.put("name", bedName != null ? bedName : "Unnamed Bed");
+                                bedLocation.put("world", world.getName());
+                                bedLocation.put("blockX", blockX);
+                                bedLocation.put("blockY", blockY);
+                                bedLocation.put("blockZ", blockZ);
+                                bedLocation.put("spawnX", spawnX);
+                                bedLocation.put("spawnY", spawnY);
+                                bedLocation.put("spawnZ", spawnZ);
+
+                                bedLocations.add(bedLocation);
+
+                                plugin.getLogger().at(java.util.logging.Level.INFO).log(
+                                    "Found bed: " + bedName + " at block(" + blockX + "," + blockY + "," + blockZ +
+                                    ") spawn(" + spawnX + "," + spawnY + "," + spawnZ + ")"
+                                );
+
+                            } catch (Exception bedEx) {
+                                plugin.getLogger().at(java.util.logging.Level.WARNING).log(
+                                    "Error processing respawn point: " + bedEx.getMessage()
+                                );
+                            }
+                        }
+
+                        plugin.getLogger().at(java.util.logging.Level.INFO).log(
+                            "Found " + bedLocations.size() + " bed locations for player"
+                        );
+                        future.complete(null);
+
+                    } catch (Exception reflectionEx) {
+                        plugin.getLogger().at(java.util.logging.Level.SEVERE).log(
+                            "Error using reflection to access bed data: " + reflectionEx.getMessage()
+                        );
+                        reflectionEx.printStackTrace();
+                        future.completeExceptionally(reflectionEx);
+                    }
+
+                } catch (Exception e) {
+                    plugin.getLogger().at(java.util.logging.Level.SEVERE).log(
+                        "Error getting bed locations: " + e.getMessage()
+                    );
+                    e.printStackTrace();
+                    future.completeExceptionally(e);
+                }
+            });
+
+            // Wait for world thread to complete
+            try {
+                future.get(5, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                plugin.getLogger().at(java.util.logging.Level.SEVERE).log(
+                    "Timeout waiting for bed locations: " + e.getMessage()
+                );
+            }
+
+            return bedLocations.toArray(new Object[0]);
+
+        } catch (Exception e) {
+            plugin.getLogger().at(java.util.logging.Level.SEVERE).log(
+                "Error parsing getPlayerBedLocation payload: " + e.getMessage()
+            );
+            e.printStackTrace();
+            return new Object[0];
+        }
+    }
+
     private Object handleListItems() {
         try {
             plugin.getLogger().at(java.util.logging.Level.INFO).log("Fetching all items from AssetMap");
@@ -1590,7 +1790,12 @@ public class TakaroRequestHandler {
         help.append("    Payload: {\"args\": \"{\\\"gameId\\\":\\\"uuid\\\"}\"}\n");
         help.append("    Returns: []\n\n");
 
-        help.append("15. getAvailableActions / help\n");
+        help.append("15. getPlayerBedLocation / getPlayerBeds\n");
+        help.append("    Description: Get all bed/respawn point locations for a player\n");
+        help.append("    Payload: {\"args\": \"{\\\"gameId\\\":\\\"uuid\\\"}\"}\n");
+        help.append("    Returns: [{\"name\":\"Bed Name\",\"world\":\"world\",\"blockX\":100,\"blockY\":64,\"blockZ\":200,\"spawnX\":100.5,\"spawnY\":64.5,\"spawnZ\":200.5}]\n\n");
+
+        help.append("16. getAvailableActions / help\n");
         help.append("    Description: Get this list (API version)\n");
         help.append("    Payload: {}\n\n");
 
@@ -1733,6 +1938,14 @@ public class TakaroRequestHandler {
         getPlayerInventory.put("payload", "{\"args\": \"{\\\"gameId\\\":\\\"player-uuid\\\"}\"}");
         getPlayerInventory.put("returns", "[]");
         actions.add(getPlayerInventory);
+
+        // getPlayerBedLocation
+        Map<String, Object> getPlayerBedLocation = new HashMap<>();
+        getPlayerBedLocation.put("action", "getPlayerBedLocation");
+        getPlayerBedLocation.put("description", "Get all bed/respawn point locations for a player");
+        getPlayerBedLocation.put("payload", "{\"args\": \"{\\\"gameId\\\":\\\"player-uuid\\\"}\"}");
+        getPlayerBedLocation.put("returns", "[{\"name\":\"Bed Name\",\"world\":\"world\",\"blockX\":100,\"blockY\":64,\"blockZ\":200,\"spawnX\":100.5,\"spawnY\":64.5,\"spawnZ\":200.5}]");
+        actions.add(getPlayerBedLocation);
 
         // getAvailableActions / help
         Map<String, Object> help = new HashMap<>();
