@@ -57,6 +57,9 @@ public class TakaroRequestHandler {
                 case "sendMessage":
                     responsePayload = handleSendMessage(payload);
                     break;
+                case "sendFormattedChat":
+                    responsePayload = handleSendFormattedChat(payload);
+                    break;
                 case "executeCommand":
                 case "executeConsoleCommand":
                     responsePayload = handleExecuteCommand(payload);
@@ -209,6 +212,53 @@ public class TakaroRequestHandler {
             return result;
         } catch (Exception e) {
             plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error sending message: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, Boolean> result = new HashMap<>();
+            result.put("success", false);
+            return result;
+        }
+    }
+
+    private Object handleSendFormattedChat(JsonObject payload) {
+        try {
+            // Parse the formatted message from Takaro
+            String message;
+            if (payload.has("args")) {
+                String argsString = payload.get("args").getAsString();
+                JsonObject args = gson.fromJson(argsString, JsonObject.class);
+                message = args.get("message").getAsString();
+            } else {
+                message = payload.get("message").getAsString();
+            }
+
+            plugin.getLogger().at(java.util.logging.Level.INFO).log("Broadcasting formatted chat from Takaro: " + message);
+
+            com.hypixel.hytale.server.core.universe.Universe universe =
+                com.hypixel.hytale.server.core.universe.Universe.get();
+
+            if (universe == null) {
+                plugin.getLogger().at(java.util.logging.Level.WARNING).log("Universe is null");
+                Map<String, Boolean> result = new HashMap<>();
+                result.put("success", false);
+                return result;
+            }
+
+            List<PlayerRef> players = universe.getPlayers();
+
+            // Parse color codes from Takaro's formatted message
+            Message msg = ChatFormatter.parseColoredMessage(message);
+
+            // Broadcast to all players
+            for (PlayerRef player : players) {
+                player.sendMessage(msg);
+            }
+
+            plugin.getLogger().at(java.util.logging.Level.INFO).log("Formatted chat sent to " + players.size() + " players");
+            Map<String, Boolean> result = new HashMap<>();
+            result.put("success", true);
+            return result;
+        } catch (Exception e) {
+            plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error sending formatted chat: " + e.getMessage());
             e.printStackTrace();
             Map<String, Boolean> result = new HashMap<>();
             result.put("success", false);

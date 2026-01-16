@@ -24,15 +24,25 @@ public class ChatEventListener {
      */
     public void onPlayerChat(PlayerChatEvent event) {
         try {
-            // Apply color formatting to player chat
-            ChatFormatter.onPlayerChat(event);
-
             // Extract player data
             String playerName = event.getSender().getUsername();
             String uuid = event.getSender().getUuid().toString();
             String message = event.getContent();
 
             plugin.getLogger().at(java.util.logging.Level.INFO).log("[CHAT] " + playerName + ": " + message);
+
+            // Check if we should intercept all chat and send to Takaro for formatting
+            boolean interceptAllChat = plugin.getConfig().getInterceptAllChat();
+
+            if (interceptAllChat) {
+                // Cancel the event so chat doesn't broadcast locally
+                // Takaro will send formatted chat back via sendFormattedChat action
+                event.setCancelled(true);
+                plugin.getLogger().at(java.util.logging.Level.FINE).log("Chat event cancelled - forwarding to Takaro for formatting");
+            } else {
+                // Apply local color formatting if not intercepting
+                ChatFormatter.onPlayerChat(event);
+            }
 
             // Don't forward if not connected to Takaro
             if (!plugin.getWebSocket().isIdentified()) {
@@ -42,7 +52,7 @@ public class ChatEventListener {
             // Build chat event for Takaro (don't include "type" - that's added by sendGameEvent)
             Map<String, Object> chatData = new HashMap<>();
             chatData.put("msg", message);
-            chatData.put("channel", "global"); // TODO: Detect channel from event if available
+            chatData.put("channel", "global");
 
             Map<String, String> player = new HashMap<>();
             player.put("name", playerName);
