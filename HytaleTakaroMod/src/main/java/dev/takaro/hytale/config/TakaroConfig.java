@@ -28,7 +28,6 @@ public class TakaroConfig {
     private void createDefault() {
         properties.setProperty("IDENTITY_TOKEN", "MyHytaleServer");
         properties.setProperty("REGISTRATION_TOKEN", "");
-        properties.setProperty("INTERCEPT_ALL_CHAT", "true");
 
         try {
             configFile.getParentFile().mkdirs();
@@ -36,8 +35,7 @@ public class TakaroConfig {
                 properties.store(fos, "Takaro Integration Configuration\n" +
                     "# \n" +
                     "# IDENTITY_TOKEN: Choose a name for your server (e.g., MyHytaleServer, SurvivalServer, etc.)\n" +
-                    "# REGISTRATION_TOKEN: Get this from Takaro dashboard (Settings → Game Servers → Add Server → Generic)\n" +
-                    "# INTERCEPT_ALL_CHAT: When true, all chat is sent to Takaro for formatting (default: true)\n");
+                    "# REGISTRATION_TOKEN: Get this from Takaro dashboard (Settings → Game Servers → Add Server → Generic)\n");
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -64,9 +62,5 @@ public class TakaroConfig {
 
     public String getHytaleApiToken() {
         return properties.getProperty("HYTALE_API_TOKEN", "");
-    }
-
-    public boolean getInterceptAllChat() {
-        return Boolean.parseBoolean(properties.getProperty("INTERCEPT_ALL_CHAT", "true"));
     }
 }

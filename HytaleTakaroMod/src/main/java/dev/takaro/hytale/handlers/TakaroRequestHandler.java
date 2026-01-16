@@ -57,8 +57,8 @@ public class TakaroRequestHandler {
                 case "sendMessage":
                     responsePayload = handleSendMessage(payload);
                     break;
-                case "sendFormattedChat":
-                    responsePayload = handleSendFormattedChat(payload);
+                case "setPlayerNameColor":
+                    responsePayload = handleSetPlayerNameColor(payload);
                     break;
                 case "executeCommand":
                 case "executeConsoleCommand":
@@ -219,46 +219,27 @@ public class TakaroRequestHandler {
         }
     }
 
-    private Object handleSendFormattedChat(JsonObject payload) {
+    private Object handleSetPlayerNameColor(JsonObject payload) {
         try {
-            // Parse the formatted message from Takaro
-            String message;
-            if (payload.has("args")) {
-                String argsString = payload.get("args").getAsString();
-                JsonObject args = gson.fromJson(argsString, JsonObject.class);
-                message = args.get("message").getAsString();
-            } else {
-                message = payload.get("message").getAsString();
-            }
+            // Parse args: {"uuid": "player-uuid", "color": "gold"}
+            String argsString = payload.get("args").getAsString();
+            JsonObject args = gson.fromJson(argsString, JsonObject.class);
 
-            plugin.getLogger().at(java.util.logging.Level.INFO).log("Broadcasting formatted chat from Takaro: " + message);
+            String uuid = args.get("uuid").getAsString();
+            String color = args.has("color") ? args.get("color").getAsString() : null;
 
-            com.hypixel.hytale.server.core.universe.Universe universe =
-                com.hypixel.hytale.server.core.universe.Universe.get();
+            plugin.getLogger().at(java.util.logging.Level.INFO).log(
+                "Setting name color for player " + uuid + ": " + color
+            );
 
-            if (universe == null) {
-                plugin.getLogger().at(java.util.logging.Level.WARNING).log("Universe is null");
-                Map<String, Boolean> result = new HashMap<>();
-                result.put("success", false);
-                return result;
-            }
+            // Update the cache
+            plugin.setPlayerNameColor(uuid, color);
 
-            List<PlayerRef> players = universe.getPlayers();
-
-            // Parse color codes from Takaro's formatted message
-            Message msg = ChatFormatter.parseColoredMessage(message);
-
-            // Broadcast to all players
-            for (PlayerRef player : players) {
-                player.sendMessage(msg);
-            }
-
-            plugin.getLogger().at(java.util.logging.Level.INFO).log("Formatted chat sent to " + players.size() + " players");
             Map<String, Boolean> result = new HashMap<>();
             result.put("success", true);
             return result;
         } catch (Exception e) {
-            plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error sending formatted chat: " + e.getMessage());
+            plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error setting player name color: " + e.getMessage());
             e.printStackTrace();
             Map<String, Boolean> result = new HashMap<>();
             result.put("success", false);

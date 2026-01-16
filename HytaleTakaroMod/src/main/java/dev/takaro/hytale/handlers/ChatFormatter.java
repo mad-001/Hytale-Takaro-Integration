@@ -115,7 +115,7 @@ public class ChatFormatter {
     /**
      * Parses a color code - supports hex (ff0000) or named colors (red)
      */
-    private static Color parseColor(String colorCode) {
+    public static Color parseColor(String colorCode) {
         if (colorCode == null || colorCode.isEmpty()) {
             return null;
         }

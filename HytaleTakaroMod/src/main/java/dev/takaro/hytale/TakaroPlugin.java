@@ -14,6 +14,7 @@ import dev.takaro.hytale.websocket.TakaroWebSocket;
 
 import javax.annotation.Nonnull;
 import java.io.File;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -27,6 +28,10 @@ public class TakaroPlugin extends JavaPlugin {
     private ChatEventListener chatListener;
     private PlayerEventListener playerListener;
     private ScheduledExecutorService telemetryScheduler;
+
+    // Cache for player name colors (UUID -> color code)
+    // Set by Takaro via setPlayerNameColor action
+    private final ConcurrentHashMap<String, String> playerNameColors = new ConcurrentHashMap<>();
 
     public TakaroPlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -175,5 +180,30 @@ public class TakaroPlugin extends JavaPlugin {
 
     public String getVersion() {
         return VERSION;
+    }
+
+    /**
+     * Get a player's name color from cache
+     * @param uuid Player UUID
+     * @return Color code (e.g., "gold", "ff0000") or null if not set
+     */
+    public String getPlayerNameColor(String uuid) {
+        return playerNameColors.get(uuid);
+    }
+
+    /**
+     * Set a player's name color in cache
+     * Called by Takaro via setPlayerNameColor action
+     * @param uuid Player UUID
+     * @param colorCode Color code (e.g., "gold", "ff0000")
+     */
+    public void setPlayerNameColor(String uuid, String colorCode) {
+        if (colorCode == null || colorCode.isEmpty()) {
+            playerNameColors.remove(uuid);
+            getLogger().at(java.util.logging.Level.INFO).log("Removed name color for player: " + uuid);
+        } else {
+            playerNameColors.put(uuid, colorCode);
+            getLogger().at(java.util.logging.Level.INFO).log("Set name color for player " + uuid + ": " + colorCode);
+        }
     }
 }

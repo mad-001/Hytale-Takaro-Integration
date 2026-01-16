@@ -5,18 +5,20 @@ All notable changes to the Hytale-Takaro Integration mod will be documented in t
 ## [1.4.0] - 2026-01-16
 
 ### Added
-- **Complete Chat Relay Through Takaro** - Intercepts all chat messages and sends them to Takaro for formatting
-  - Added `INTERCEPT_ALL_CHAT` configuration option (default: true)
-  - When enabled, chat events are cancelled locally and sent to Takaro
-  - Takaro processes messages, applies name/message colors, handles commands
-  - Added `sendFormattedChat` API action to broadcast Takaro's formatted messages back to all players
-  - Gives Takaro complete control over chat formatting and colors
+- **Player Name Colors via Takaro** - Players can set custom chat name colors using Takaro commands
+  - Added `setPlayerNameColor` API action - allows Takaro to set/update player name colors
+  - Name colors are cached in memory (UUID -> color code mapping)
+  - Supports both hex colors (ff0000) and named colors (gold, red, blue, etc.)
+  - Players use Takaro commands like `/namecolor gold` (command requires proper permissions)
+  - Colors are applied locally when players chat - no interception needed
 
 ### Technical
-- ChatEventListener now checks `interceptAllChat` config and calls `event.setCancelled(true)` when enabled
-- Falls back to local ChatFormatter when `INTERCEPT_ALL_CHAT` is false
-- New API action: `sendFormattedChat` - receives formatted message from Takaro and broadcasts to all players
-- Uses existing ChatFormatter.parseColoredMessage() to handle Takaro's color codes
+- TakaroPlugin: Added `ConcurrentHashMap<String, String> playerNameColors` cache
+- TakaroPlugin: Added `getPlayerNameColor()` and `setPlayerNameColor()` methods
+- ChatEventListener: Looks up cached name color and applies it via `ChatFormatter.parseColor()`
+- ChatFormatter: Made `parseColor()` method public for use by ChatEventListener
+- TakaroRequestHandler: Added `handleSetPlayerNameColor()` to update the cache
+- No chat event cancellation - all formatting happens locally
 
 ## [1.2.5] - 2026-01-15
 

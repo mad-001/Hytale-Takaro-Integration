@@ -1,14 +1,17 @@
 package dev.takaro.hytale.events;
 
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.event.events.player.PlayerChatEvent;
 import dev.takaro.hytale.TakaroPlugin;
 import dev.takaro.hytale.handlers.ChatFormatter;
 
+import java.awt.Color;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  * Listens for chat events from Hytale and forwards them to Takaro
+ * Applies player name colors based on Takaro permissions
  * Uses official Hytale event pattern
  */
 public class ChatEventListener {
@@ -31,16 +34,23 @@ public class ChatEventListener {
 
             plugin.getLogger().at(java.util.logging.Level.INFO).log("[CHAT] " + playerName + ": " + message);
 
-            // Check if we should intercept all chat and send to Takaro for formatting
-            boolean interceptAllChat = plugin.getConfig().getInterceptAllChat();
+            // Get player's name color from cache (set by Takaro via setPlayerNameColor action)
+            String nameColorCode = plugin.getPlayerNameColor(uuid);
+            Color nameColor = ChatFormatter.parseColor(nameColorCode);
 
-            if (interceptAllChat) {
-                // Cancel the event so chat doesn't broadcast locally
-                // Takaro will send formatted chat back via sendFormattedChat action
-                event.setCancelled(true);
-                plugin.getLogger().at(java.util.logging.Level.FINE).log("Chat event cancelled - forwarding to Takaro for formatting");
+            if (nameColor != null) {
+                // Apply custom name color
+                Message formattedMessage = ChatFormatter.parseColoredMessage(message);
+                event.setFormatter((playerRef, msg) ->
+                    Message.join(
+                        Message.raw("<").color(Color.GRAY),
+                        Message.raw(playerName).color(nameColor),
+                        Message.raw("> ").color(Color.GRAY),
+                        formattedMessage
+                    )
+                );
             } else {
-                // Apply local color formatting if not intercepting
+                // No custom color - use default formatting
                 ChatFormatter.onPlayerChat(event);
             }
 
