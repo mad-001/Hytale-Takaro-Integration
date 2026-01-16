@@ -1,184 +1,64 @@
-# Hytale-Takaro Integration Mod
+# Hytale Takaro Integration
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Java](https://img.shields.io/badge/Java-24+-orange.svg)](https://adoptium.net/)
-[![Hytale](https://img.shields.io/badge/Hytale-Server%20Plugin-blue.svg)](https://hytale.com/)
-[![Takaro](https://img.shields.io/badge/Takaro-Integration-green.svg)](https://takaro.dev/)
-
-A Hytale server plugin that integrates with Takaro for server management, chat relay, and player tracking.
-
-> **Note**: This plugin runs **inside** the Hytale server process (not as a separate bridge). Players don't need to install anything client-side.
-
-## 📚 Documentation
-
-- **[Installation Guide](#installation)** - How to set up the plugin
-- **[Configuration](#configuration)** - Config file options
-- **[Hytale API Integration](HYTALE_API_INTEGRATION.md)** - Complete API reference
-- **[Implementation Status](IMPLEMENTATION_STATUS.md)** - Current status & roadmap
-- **[Contributing](CONTRIBUTING.md)** - How to contribute
-
-## ⚡ Quick Start
-
-```bash
-# 1. Build the plugin
-mvn clean package
-
-# 2. Copy to your Hytale server
-cp target/HytaleTakaroMod-1.0.0.jar /path/to/hytale/plugins/
-
-# 3. Start server and edit config
-# Edit: plugins/TakaroPlugin/config.properties
-
-# 4. Restart server
-```
+Hytale server plugin that integrates with Takaro (https://takaro.io/) for server management and automation.
 
 ## Features
 
-**Takaro Integration:**
-- WebSocket connection to Takaro platform
-- Real-time chat message relay
-- Player connect/disconnect events
-- Server command execution
-- Player management (kick, ban, teleport)
-- Server info reporting
+- **Player Events**: Forwards player connect/disconnect events to Takaro
+- **Chat Integration**: Forwards chat messages and supports color formatting with `[color]text[-]` syntax
+- **Console Commands**: Execute Hytale commands from Takaro console
+- **API Actions**:
+  - `getPlayers` - Get list of online players
+  - `giveItem` - Give items to players
+  - `kickPlayer` - Kick players from server
+  - `teleportPlayer` - Teleport players to coordinates
+  - `teleportPlayerToPlayer` - Teleport one player to another
+  - `getPlayerLocation` - Get player coordinates
+  - `sendMessage` - Send messages to all players
+  - `listItems` - List all available items for Takaro shop
+  - `listCommands` - List available console commands
+  - And more...
 
-**Hytale First-Party API Integration:**
-- UUID ↔ Name lookups (single and bulk)
-- Player profile fetching (cosmetics, avatars, public data)
-- Game version checking
-- Automatic server telemetry reporting (every 5 minutes)
-- Player reporting for ToS violations
-- Payment processing via Hytale's payment gate
-- Global sanctions checking (when available)
-- Friends list retrieval (when available)
-- Webhook subscriptions (when available)
+## Setup
 
-See [HYTALE_API_INTEGRATION.md](HYTALE_API_INTEGRATION.md) for detailed API documentation.
-
-## Building
-
-### Prerequisites
-- Java 24 or higher
-- Maven 3.6+
-- Hytale Server installed
-
-### Build Steps
-
-```bash
-# Clone/navigate to project
-cd HytaleTakaroMod
-
-# Build the plugin JAR
-mvn clean package
-
-# Output will be in target/HytaleTakaroMod-1.0.0.jar
-```
-
-## Installation
-
-1. Build the plugin as described above
-2. Copy `target/HytaleTakaroMod-1.0.0.jar` to your Hytale server's `plugins` directory
-3. Start your Hytale server
-4. Edit the generated `plugins/TakaroPlugin/config.properties` file:
-   ```properties
-   TAKARO_WS_URL=wss://connect.next.takaro.dev/
-   IDENTITY_TOKEN=your_identity_token_here
-   REGISTRATION_TOKEN=your_registration_token_here
-   ```
-5. Restart your Hytale server
+1. Build the mod: `mvn clean package`
+2. Copy `target/HytaleTakaroMod-1.0.0.jar` to your Hytale server's mods folder
+3. Configure `config.properties` with your Takaro connection details
+4. Restart your Hytale server
 
 ## Configuration
 
-The configuration file is automatically created at `plugins/TakaroPlugin/config.properties`:
+Create `config.properties` in the mod's data directory with:
 
-**Takaro Settings:**
-- `TAKARO_WS_URL`: WebSocket URL for Takaro connection (default: `wss://connect.next.takaro.dev/`)
-- `IDENTITY_TOKEN`: Your Takaro identity token (required)
-- `REGISTRATION_TOKEN`: Your Takaro registration token (optional)
-
-**Hytale API Settings:**
-- `HYTALE_API_URL`: Hytale first-party API URL (default: `https://api.hytale.com`)
-- `HYTALE_API_TOKEN`: Your authenticated server token from Hytale (required for API features)
-
-## Architecture
-
-This plugin runs **inside** the Hytale server process (not as a separate bridge):
-
-```
-Hytale Server
-  └── TakaroPlugin.jar
-        ├── WebSocket Client (connects to Takaro)
-        ├── Event Listeners (chat, players, etc.)
-        └── Request Handlers (commands from Takaro)
+```properties
+TAKARO_WS_URL=wss://connect.takaro.io/
+TAKARO_IDENTITY_TOKEN=your_token_here
+TAKARO_REGISTRATION_TOKEN=your_registration_token
+HYTALE_API_URL=https://api.hytale.com
+HYTALE_API_TOKEN=your_hytale_token
 ```
 
-### Key Components
+## Player Identification
 
-- **TakaroPlugin**: Main plugin class, manages lifecycle
-- **TakaroWebSocket**: WebSocket client for Takaro communication
-- **TakaroConfig**: Configuration file handler
-- **ChatEventListener**: Listens for chat messages and forwards to Takaro
-- **PlayerEventListener**: Listens for player join/leave/death events
-- **TakaroRequestHandler**: Handles incoming requests from Takaro
+Players are identified using the `platformId` format: `hytale:<uuid>`
+
+This ensures proper player tracking without interfering with Steam/Epic/Xbox integrations.
+
+## Color Chat Formatting
+
+Players can use color codes in chat:
+- Named colors: `[red]text[-]`, `[blue]text[-]`, etc.
+- Hex colors: `[ff0000]text[-]`
+
+Supported named colors: red, green, blue, yellow, orange, pink, white, black, gray, cyan, magenta, purple, gold, lime, aqua
 
 ## Development
 
-### Project Structure
-
-```
-src/main/java/dev/takaro/hytale/
-├── TakaroPlugin.java              # Main plugin class
-├── config/
-│   └── TakaroConfig.java          # Configuration handler
-├── websocket/
-│   └── TakaroWebSocket.java       # WebSocket client
-├── events/
-│   ├── ChatEventListener.java     # Chat event handling
-│   └── PlayerEventListener.java   # Player event handling
-└── handlers/
-    └── TakaroRequestHandler.java  # Takaro request handling
-```
-
-### Supported Takaro Actions
-
-- `testReachability` - Check if server is reachable
-- `getPlayers` - Get list of online players
-- `getServerInfo` - Get server information
-- `sendMessage` - Send message to game chat
-- `executeCommand` - Execute server command
-- `kickPlayer` - Kick a player
-- `banPlayer` - Ban a player
-- `unbanPlayer` - Unban a player
-- `getPlayerLocation` - Get player coordinates
-- `teleportPlayer` - Teleport player
-
-### Events Sent to Takaro
-
-- `chat-message` - Player chat messages
-- `player-connected` - Player joins server
-- `player-disconnected` - Player leaves server
-- `player-death` - Player dies
-
-## Troubleshooting
-
-### Plugin not loading
-- Check that HytaleServer.jar is in the correct location (`../libs/HytaleServer.jar`)
-- Verify Java version is 24+
-- Check server logs for errors
-
-### Not connecting to Takaro
-- Verify `IDENTITY_TOKEN` is set in config.properties
-- Check network connectivity to `connect.next.takaro.dev`
-- Review plugin logs for WebSocket errors
-
-### Events not being sent
-- Ensure WebSocket connection is established (check logs for "Successfully identified with Takaro")
-- Verify event listeners are properly registered with Hytale's event system
+Built with:
+- Java 21
+- Maven 3.9.9
+- Hytale Server API
 
 ## License
 
-[Add your license here]
-
-## Credits
-
-Based on the Palworld-Takaro Bridge architecture.
+MIT
