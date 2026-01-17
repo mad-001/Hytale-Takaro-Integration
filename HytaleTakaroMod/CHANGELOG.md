@@ -2,6 +2,22 @@
 
 All notable changes to the Hytale-Takaro Integration mod will be documented in this file.
 
+## [1.4.1] - 2026-01-17
+
+### Added
+- **Console Command: `setcolor`** - Set player chat name colors via Takaro console commands
+  - Usage: `setcolor <player> <color>` or `namecolor <player> <color>`
+  - Example: `setcolor Mad001 gold` or `namecolor Hennyy ff0000`
+  - Takaro can now execute: `data.gameServer.executeCommand('setcolor Mad001 gold')`
+  - Updates the in-memory cache immediately
+  - Updated help text to include setcolor command
+
+### Technical
+- TakaroRequestHandler: Added `handleSetColorConsoleCommand()` method
+- Command accepts both `setcolor` and `namecolor` aliases
+- Validates player exists before setting color
+- Returns success/error message to Takaro
+
 ## [1.4.0] - 2026-01-16
 
 ### Added

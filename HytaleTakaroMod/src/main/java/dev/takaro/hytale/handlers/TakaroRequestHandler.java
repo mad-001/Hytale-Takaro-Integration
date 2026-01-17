@@ -285,6 +285,12 @@ public class TakaroRequestHandler {
                 return handleBedsConsoleCommand(command);
             }
 
+            // Check if it's a setcolor command
+            if (command.toLowerCase().startsWith("setcolor ") ||
+                command.toLowerCase().startsWith("namecolor ")) {
+                return handleSetColorConsoleCommand(command);
+            }
+
             // Check if it's a give command
             if (command.toLowerCase().startsWith("give ")) {
                 return handleGiveConsoleCommand(command);
@@ -1950,6 +1956,66 @@ public class TakaroRequestHandler {
         }
     }
 
+    private Map<String, Object> handleSetColorConsoleCommand(String command) {
+        try {
+            // Parse: setcolor <player> <color> or namecolor <player> <color>
+            String[] parts = command.split("\\s+");
+
+            if (parts.length < 3) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("rawResult", "Usage: setcolor <player> <color>\nExample: setcolor Mad001 gold\nOr: namecolor Mad001 ff0000");
+                return result;
+            }
+
+            final String playerName = parts[1];
+            final String color = parts[2];
+
+            plugin.getLogger().at(java.util.logging.Level.INFO).log("Console setcolor command: " + playerName + " -> " + color);
+
+            com.hypixel.hytale.server.core.universe.Universe universe =
+                com.hypixel.hytale.server.core.universe.Universe.get();
+
+            if (universe == null) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("rawResult", "Universe is null");
+                return result;
+            }
+
+            // Find player by name
+            PlayerRef playerRef = universe.getPlayers().stream()
+                .filter(p -> p.getUsername().equalsIgnoreCase(playerName))
+                .findFirst()
+                .orElse(null);
+
+            if (playerRef == null) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("rawResult", "Player not found: " + playerName);
+                return result;
+            }
+
+            String uuid = playerRef.getUuid().toString();
+
+            // Update the cache
+            plugin.setPlayerNameColor(uuid, color);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("rawResult", playerName + "'s chat name color set to: " + color);
+            return result;
+
+        } catch (Exception e) {
+            plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error handling setcolor command: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("rawResult", "Error: " + e.getMessage());
+            return result;
+        }
+    }
+
     private Map<String, Object> buildHelpResponse() {
         StringBuilder help = new StringBuilder();
         help.append("=== TAKARO API ACTIONS ===\n\n");
@@ -2040,6 +2106,10 @@ public class TakaroRequestHandler {
         help.append("    Example: tp Hennyy 100 64 200\n\n");
         help.append("  - teleportPlayerToPlayer <player> <targetPlayer> (or: tpp)\n");
         help.append("    Example: tpp Hennyy Mad001\n\n");
+        help.append("  - setcolor <player> <color> (or: namecolor)\n");
+        help.append("    Set a player's chat name color\n");
+        help.append("    Example: setcolor Mad001 gold\n");
+        help.append("    Example: namecolor Hennyy ff0000\n\n");
         help.append("STANDARD HYTALE:\n");
         help.append("  - who, version, kick, etc. (all standard Hytale commands work)\n\n");
 
