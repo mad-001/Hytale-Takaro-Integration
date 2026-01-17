@@ -6,7 +6,7 @@
 
     <groupId>dev.takaro</groupId>
     <artifactId>HytaleTakaroMod</artifactId>
-    <version>1.4.2</version>
+    <version>1.4.3</version>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>

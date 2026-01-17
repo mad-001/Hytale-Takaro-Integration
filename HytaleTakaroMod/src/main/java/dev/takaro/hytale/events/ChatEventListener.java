@@ -44,7 +44,7 @@ public class ChatEventListener {
                 event.setFormatter((playerRef, msg) ->
                     Message.join(
                         Message.raw(playerName).color(nameColor),
-                        Message.raw(": ").color(Color.GRAY),
+                        Message.raw(": "),
                         formattedMessage
                     )
                 );
