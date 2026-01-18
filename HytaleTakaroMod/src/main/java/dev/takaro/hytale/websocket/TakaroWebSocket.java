@@ -59,11 +59,8 @@ public class TakaroWebSocket extends WebSocketClient {
                     break;
                 case "error":
                     plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Takaro error: " + json.toString());
-                    // Reconnect when Takaro sends error - backend may be in bad state
-                    plugin.getLogger().at(java.util.logging.Level.WARNING).log("Reconnecting to Takaro due to error message...");
-                    isIdentified = false;
-                    close();
-                    scheduleReconnect();
+                    // DO NOT auto-reconnect on error - causes infinite loop
+                    // Just log the error and let the connection stay open
                     break;
                 default:
                     plugin.getLogger().at(java.util.logging.Level.WARNING).log("Unknown message type from Takaro: " + type);
