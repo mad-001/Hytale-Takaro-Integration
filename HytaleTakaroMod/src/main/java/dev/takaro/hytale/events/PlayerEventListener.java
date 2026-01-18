@@ -29,7 +29,7 @@ public class PlayerEventListener {
             String playerName = event.getPlayerRef().getUsername();
             String uuid = event.getPlayerRef().getUuid().toString();
 
-            plugin.getLogger().at(java.util.logging.Level.INFO).log("[EVENT] Player connected: " + playerName);
+            plugin.getLogger().at(java.util.logging.Level.FINE).log("[EVENT] Player connected: " + playerName);
 
             // Don't forward if not connected to Takaro
             if (!plugin.getWebSocket().isIdentified()) {
@@ -39,10 +39,16 @@ public class PlayerEventListener {
             // Build connect event for Takaro
             Map<String, Object> eventData = new HashMap<>();
 
-            Map<String, String> player = new HashMap<>();
+            Map<String, Object> player = new HashMap<>();
             player.put("name", playerName);
             player.put("gameId", uuid);
             player.put("platformId", "hytale:" + uuid);
+
+            // Add position data - use 0,0,0 if position not available yet
+            // Position is often null during early connection phase
+            player.put("posX", 0.0);
+            player.put("posY", 0.0);
+            player.put("posZ", 0.0);
 
             eventData.put("player", player);
 
@@ -65,7 +71,7 @@ public class PlayerEventListener {
             String playerName = event.getPlayerRef().getUsername();
             String uuid = event.getPlayerRef().getUuid().toString();
 
-            plugin.getLogger().at(java.util.logging.Level.INFO).log("[EVENT] Player disconnected: " + playerName);
+            plugin.getLogger().at(java.util.logging.Level.FINE).log("[EVENT] Player disconnected: " + playerName);
 
             // Deduplicate - Hytale fires PlayerDisconnectEvent multiple times
             long currentTime = System.currentTimeMillis();
@@ -84,17 +90,20 @@ public class PlayerEventListener {
             // Build disconnect event for Takaro
             Map<String, Object> eventData = new HashMap<>();
 
-            Map<String, String> player = new HashMap<>();
+            Map<String, Object> player = new HashMap<>();
             player.put("name", playerName);
             player.put("gameId", uuid);
             player.put("platformId", "hytale:" + uuid);
 
+            // Add position data - use 0,0,0 if position not available
+            player.put("posX", 0.0);
+            player.put("posY", 0.0);
+            player.put("posZ", 0.0);
+
             eventData.put("player", player);
 
             // Send to Takaro
-            plugin.getLogger().at(java.util.logging.Level.INFO).log("Sending disconnect event for " + playerName + " to Takaro");
             plugin.getWebSocket().sendGameEvent("player-disconnected", eventData);
-            plugin.getLogger().at(java.util.logging.Level.INFO).log("Disconnect event sent successfully");
 
         } catch (Exception e) {
             plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error handling player disconnect: " + e.getMessage());

@@ -59,6 +59,11 @@ public class TakaroWebSocket extends WebSocketClient {
                     break;
                 case "error":
                     plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Takaro error: " + json.toString());
+                    // Reconnect when Takaro sends error - backend may be in bad state
+                    plugin.getLogger().at(java.util.logging.Level.WARNING).log("Reconnecting to Takaro due to error message...");
+                    isIdentified = false;
+                    close();
+                    scheduleReconnect();
                     break;
                 default:
                     plugin.getLogger().at(java.util.logging.Level.WARNING).log("Unknown message type from Takaro: " + type);
@@ -113,7 +118,7 @@ public class TakaroWebSocket extends WebSocketClient {
         JsonObject payload = message.getAsJsonObject("payload");
         String action = payload.get("action").getAsString();
 
-        plugin.getLogger().at(java.util.logging.Level.INFO).log("Received Takaro request: " + action);
+        plugin.getLogger().at(java.util.logging.Level.FINE).log("Received Takaro request: " + action);
 
         // Delegate to plugin's request handler
         plugin.handleTakaroRequest(requestId, action, payload);
@@ -154,10 +159,6 @@ public class TakaroWebSocket extends WebSocketClient {
         payload.put("data", data);
 
         event.put("payload", payload);
-
-        // Log the exact JSON being sent
-        String json = gson.toJson(event);
-        plugin.getLogger().at(java.util.logging.Level.INFO).log("Sending JSON: " + json);
 
         sendToTakaro(event);
     }

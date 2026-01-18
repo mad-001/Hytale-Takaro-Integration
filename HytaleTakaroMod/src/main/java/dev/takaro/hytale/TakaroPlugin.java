@@ -4,11 +4,14 @@ import com.google.gson.JsonObject;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.logger.backend.HytaleLoggerBackend;
 import dev.takaro.hytale.api.HytaleApiClient;
 import dev.takaro.hytale.commands.TakaroDebugCommand;
 import dev.takaro.hytale.config.TakaroConfig;
 import dev.takaro.hytale.events.ChatEventListener;
+import dev.takaro.hytale.events.PlayerDeathSystem;
 import dev.takaro.hytale.events.PlayerEventListener;
+import dev.takaro.hytale.events.TakaroLogHandler;
 import dev.takaro.hytale.handlers.TakaroRequestHandler;
 import dev.takaro.hytale.websocket.TakaroWebSocket;
 
@@ -20,13 +23,15 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class TakaroPlugin extends JavaPlugin {
-    private static final String VERSION = "1.4.3";
+    private static final String VERSION = "1.7.1";
     private TakaroConfig config;
     private TakaroWebSocket webSocket;
     private TakaroRequestHandler requestHandler;
     private HytaleApiClient hytaleApi; // Hidden feature - not in user config yet
     private ChatEventListener chatListener;
     private PlayerEventListener playerListener;
+    private PlayerDeathSystem deathSystem;
+    private TakaroLogHandler logHandler;
     private ScheduledExecutorService telemetryScheduler;
 
     // Cache for player name colors (UUID -> color code)
@@ -41,8 +46,8 @@ public class TakaroPlugin extends JavaPlugin {
     protected void setup() {
         getLogger().at(java.util.logging.Level.INFO).log("Hytale-Takaro Integration v" + VERSION + " initializing...");
 
-        // Load configuration
-        File configFile = getDataDirectory().resolve("config.properties").toFile();
+        // Load configuration - store in mods folder directly, not in subdirectory
+        File configFile = getFile().getParent().resolve("TakaroConfig.properties").toFile();
         config = new TakaroConfig(configFile);
 
         // Initialize Hytale API client (hidden feature - optional)
@@ -58,9 +63,17 @@ public class TakaroPlugin extends JavaPlugin {
         // Initialize event listeners
         chatListener = new ChatEventListener(this);
         playerListener = new PlayerEventListener(this);
+        deathSystem = new PlayerDeathSystem(this);
+        logHandler = new TakaroLogHandler(this);
 
         // Register events (official pattern)
         registerEvents();
+
+        // Register ECS systems
+        registerEcsSystems();
+
+        // Subscribe to Hytale's logging system
+        HytaleLoggerBackend.subscribe(logHandler.getLogBuffer());
 
         // Register debug command (official pattern)
         HytaleServer.get().getCommandManager().register(new TakaroDebugCommand(this));
@@ -101,6 +114,21 @@ public class TakaroPlugin extends JavaPlugin {
         }
     }
 
+    /**
+     * Register ECS systems using official Hytale pattern
+     */
+    private void registerEcsSystems() {
+        try {
+            // Register player death system with entity store registry
+            this.getEntityStoreRegistry().registerSystem(deathSystem);
+            getLogger().at(java.util.logging.Level.INFO).log("Registered PlayerDeathSystem");
+
+        } catch (Exception e) {
+            getLogger().at(java.util.logging.Level.SEVERE).log("Failed to register ECS systems: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
     @Override
     protected void start() {
         super.start();
@@ -130,6 +158,9 @@ public class TakaroPlugin extends JavaPlugin {
             telemetryScheduler.scheduleAtFixedRate(this::reportTelemetry, 1, 5, TimeUnit.MINUTES);
             getLogger().at(java.util.logging.Level.INFO).log("Started Hytale telemetry reporting");
         }
+
+        // Start log forwarding to Takaro
+        logHandler.start();
     }
 
     private void reportTelemetry() {
@@ -152,6 +183,11 @@ public class TakaroPlugin extends JavaPlugin {
     protected void shutdown() {
         super.shutdown();
         getLogger().at(java.util.logging.Level.INFO).log("Shutting down Takaro integration...");
+
+        if (logHandler != null) {
+            HytaleLoggerBackend.unsubscribe(logHandler.getLogBuffer());
+            logHandler.stop();
+        }
 
         if (telemetryScheduler != null) {
             telemetryScheduler.shutdownNow();
