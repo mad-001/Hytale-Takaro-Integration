@@ -43,12 +43,7 @@ public class PlayerEventListener {
             player.put("name", playerName);
             player.put("gameId", uuid);
             player.put("platformId", "hytale:" + uuid);
-
-            // Add position data - use 0,0,0 if position not available yet
-            // Position is often null during early connection phase
-            player.put("posX", 0.0);
-            player.put("posY", 0.0);
-            player.put("posZ", 0.0);
+            // NOTE: Do NOT include position data - Takaro rejects it with whitelistValidation error
 
             eventData.put("player", player);
 
@@ -94,11 +89,7 @@ public class PlayerEventListener {
             player.put("name", playerName);
             player.put("gameId", uuid);
             player.put("platformId", "hytale:" + uuid);
-
-            // Add position data - use 0,0,0 if position not available
-            player.put("posX", 0.0);
-            player.put("posY", 0.0);
-            player.put("posZ", 0.0);
+            // NOTE: Do NOT include position data - Takaro rejects it with whitelistValidation error
 
             eventData.put("player", player);
 
