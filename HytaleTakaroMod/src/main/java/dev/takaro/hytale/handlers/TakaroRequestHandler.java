@@ -51,6 +51,9 @@ public class TakaroRequestHandler {
                 case "getPlayers":
                     responsePayload = handleGetPlayers();
                     break;
+                case "getPlayer":
+                    responsePayload = handleGetPlayer(payload);
+                    break;
                 case "getServerInfo":
                     responsePayload = handleGetServerInfo();
                     break;
@@ -133,7 +136,7 @@ public class TakaroRequestHandler {
     }
 
     private Object handleGetPlayers() {
-        plugin.getLogger().at(java.util.logging.Level.INFO).log("Getting players list");
+        plugin.getLogger().at(java.util.logging.Level.FINE).log("Getting players list");
 
         try {
             com.hypixel.hytale.server.core.universe.Universe universe =
@@ -156,12 +159,92 @@ public class TakaroRequestHandler {
                 return playerData;
             }).collect(Collectors.toList());
 
-            plugin.getLogger().at(java.util.logging.Level.INFO).log("Found " + playerList.size() + " players");
+            plugin.getLogger().at(java.util.logging.Level.FINE).log("Found " + playerList.size() + " players");
             return playerList;
         } catch (Exception e) {
             plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error getting players: " + e.getMessage());
             e.printStackTrace();
             return new Object[0];
+        }
+    }
+
+    private Object handleGetPlayer(JsonObject payload) {
+        try {
+            // Parse args to get player identifier
+            String gameId = null;
+            String playerName = null;
+
+            if (payload.has("args")) {
+                String argsString = payload.get("args").getAsString();
+                JsonObject args = gson.fromJson(argsString, JsonObject.class);
+                if (args.has("gameId")) {
+                    gameId = args.get("gameId").getAsString();
+                } else if (args.has("name")) {
+                    playerName = args.get("name").getAsString();
+                }
+            } else if (payload.has("gameId")) {
+                gameId = payload.get("gameId").getAsString();
+            } else if (payload.has("playerId")) {
+                gameId = payload.get("playerId").getAsString();
+            } else if (payload.has("name")) {
+                playerName = payload.get("name").getAsString();
+            }
+
+            if (gameId == null && playerName == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("error", "No gameId or name provided");
+                return error;
+            }
+
+            com.hypixel.hytale.server.core.universe.Universe universe =
+                com.hypixel.hytale.server.core.universe.Universe.get();
+
+            if (universe == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("error", "Universe is null");
+                return error;
+            }
+
+            // Find player by gameId or name
+            final String searchGameId = gameId;
+            final String searchName = playerName;
+            PlayerRef playerRef = universe.getPlayers().stream()
+                .filter(p -> {
+                    if (searchGameId != null) {
+                        return p.getUuid().toString().equals(searchGameId);
+                    } else {
+                        return p.getUsername().equalsIgnoreCase(searchName);
+                    }
+                })
+                .findFirst()
+                .orElse(null);
+
+            if (playerRef == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("error", "Player not found");
+                return error;
+            }
+
+            // Build player data
+            String uuid = playerRef.getUuid().toString();
+            Map<String, Object> playerData = new HashMap<>();
+            playerData.put("name", playerRef.getUsername());
+            playerData.put("gameId", uuid);  // Must be a string!
+            playerData.put("platformId", "hytale:" + uuid);
+            playerData.put("ip", "127.0.0.1");
+
+            return playerData;
+
+        } catch (Exception e) {
+            plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error getting player: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", e.getMessage());
+            return error;
         }
     }
 
@@ -185,7 +268,7 @@ public class TakaroRequestHandler {
                 message = payload.get("message").getAsString();
             }
 
-            plugin.getLogger().at(java.util.logging.Level.INFO).log("Sending message to all players: " + message);
+            plugin.getLogger().at(java.util.logging.Level.FINE).log("Sending message to all players: " + message);
 
             com.hypixel.hytale.server.core.universe.Universe universe =
                 com.hypixel.hytale.server.core.universe.Universe.get();
@@ -206,7 +289,7 @@ public class TakaroRequestHandler {
                 player.sendMessage(msg);
             }
 
-            plugin.getLogger().at(java.util.logging.Level.INFO).log("Message sent to " + players.size() + " players");
+            plugin.getLogger().at(java.util.logging.Level.FINE).log("Message sent to " + players.size() + " players");
             Map<String, Boolean> result = new HashMap<>();
             result.put("success", true);
             return result;
@@ -255,7 +338,7 @@ public class TakaroRequestHandler {
             JsonObject args = gson.fromJson(argsString, JsonObject.class);
             String command = args.get("command").getAsString();
 
-            plugin.getLogger().at(java.util.logging.Level.INFO).log("Executing console command: " + command);
+            plugin.getLogger().at(java.util.logging.Level.FINE).log("Executing console command: " + command);
 
             // Check if it's a request for help/documentation
             if (command.equalsIgnoreCase("help") ||
@@ -269,6 +352,62 @@ public class TakaroRequestHandler {
             // Check if it's a request to list Hytale commands
             if (command.equalsIgnoreCase("listcommands")) {
                 return buildListCommandsResponse();
+            }
+
+            // Check for API action shortcuts typed as console commands
+            if (command.equalsIgnoreCase("testReachability")) {
+                return handleTestReachability();
+            }
+            if (command.equalsIgnoreCase("getPlayers")) {
+                return handleGetPlayers();
+            }
+            if (command.equalsIgnoreCase("getServerInfo")) {
+                return handleGetServerInfo();
+            }
+            if (command.equalsIgnoreCase("listItems")) {
+                return handleListItems();
+            }
+
+            // sendMessage <message>
+            if (command.toLowerCase().startsWith("sendmessage ")) {
+                String message = command.substring("sendmessage ".length()).trim();
+                JsonObject msgPayload = new JsonObject();
+                JsonObject msgArgs = new JsonObject();
+                msgArgs.addProperty("message", message);
+                msgPayload.addProperty("args", gson.toJson(msgArgs));
+                return handleSendMessage(msgPayload);
+            }
+
+            // getPlayerInventory <player>
+            if (command.toLowerCase().startsWith("getplayerinventory ")) {
+                String playerName = command.substring("getplayerinventory ".length()).trim();
+                return getPlayerInventoryByName(playerName);
+            }
+
+            // getPlayerLocation <player>
+            if (command.toLowerCase().startsWith("getplayerlocation ")) {
+                String playerName = command.substring("getplayerlocation ".length()).trim();
+                return getPlayerLocationByName(playerName);
+            }
+
+            // kickPlayer <player> [reason]
+            if (command.toLowerCase().startsWith("kickplayer ")) {
+                String[] parts = command.substring("kickplayer ".length()).split(" ", 2);
+                String playerName = parts[0];
+                String reason = parts.length > 1 ? parts[1] : "Kicked by admin";
+                return kickPlayerByName(playerName, reason);
+            }
+
+            // banPlayer <player>
+            if (command.toLowerCase().startsWith("banplayer ")) {
+                String playerName = command.substring("banplayer ".length()).trim();
+                return banPlayerByName(playerName);
+            }
+
+            // unbanPlayer <player>
+            if (command.toLowerCase().startsWith("unbanplayer ")) {
+                String playerName = command.substring("unbanplayer ".length()).trim();
+                return unbanPlayerByName(playerName);
             }
 
             // Check if it's a request for player locations
@@ -352,19 +491,19 @@ public class TakaroRequestHandler {
             }
 
             String outputStr = output.toString().trim();
-            plugin.getLogger().at(java.util.logging.Level.INFO).log("Captured " + logCapture.size() + " log records");
+            plugin.getLogger().at(java.util.logging.Level.FINE).log("Captured " + logCapture.size() + " log records");
 
             if (outputStr.isEmpty()) {
                 outputStr = "Command executed (no output)";
             } else {
-                plugin.getLogger().at(java.util.logging.Level.INFO).log("Output preview: " + outputStr.substring(0, Math.min(100, outputStr.length())));
+                plugin.getLogger().at(java.util.logging.Level.FINE).log("Output preview: " + outputStr.substring(0, Math.min(100, outputStr.length())));
             }
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("rawResult", outputStr);
 
-            plugin.getLogger().at(java.util.logging.Level.INFO).log("Command executed: " + command + " | Output length: " + outputStr.length());
+            plugin.getLogger().at(java.util.logging.Level.FINE).log("Command executed: " + command + " | Output length: " + outputStr.length());
             return result;
         } catch (Exception e) {
             plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error executing command: " + e.getMessage());
@@ -581,7 +720,7 @@ public class TakaroRequestHandler {
                 return result;
             }
 
-            plugin.getLogger().at(java.util.logging.Level.INFO).log("Getting player location: " + gameId);
+            plugin.getLogger().at(java.util.logging.Level.FINE).log("Getting player location: " + gameId);
 
             com.hypixel.hytale.server.core.universe.Universe universe =
                 com.hypixel.hytale.server.core.universe.Universe.get();
@@ -652,7 +791,7 @@ public class TakaroRequestHandler {
             });
 
             Map<String, Object> result = future.get(5, TimeUnit.SECONDS);
-            plugin.getLogger().at(java.util.logging.Level.INFO).log("Player location: " + result.get("x") + "," + result.get("y") + "," + result.get("z"));
+            plugin.getLogger().at(java.util.logging.Level.FINE).log("Player location: " + result.get("x") + "," + result.get("y") + "," + result.get("z"));
             return result;
         } catch (Exception e) {
             plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error handling getPlayerLocation: " + e.getMessage());
@@ -768,12 +907,24 @@ public class TakaroRequestHandler {
                         return;
                     }
                     positionFuture.complete(new Vector3d(targetTransform.getPosition()));
-                } catch (Exception e) {
+                } catch (Throwable e) {
+                    plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error getting target position: " + e.getClass().getName() + ": " + e.getMessage());
+                    e.printStackTrace();
                     positionFuture.completeExceptionally(e);
                 }
             });
 
-            Vector3d targetPosition = positionFuture.get(5, TimeUnit.SECONDS);
+            Vector3d targetPosition;
+            try {
+                targetPosition = positionFuture.get(5, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Failed to get target position: " + e.getClass().getName() + ": " + e.getMessage());
+                e.printStackTrace();
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("rawResult", "Error getting target position: " + e.getMessage());
+                return result;
+            }
 
             // Now teleport source player to target position
             Store<EntityStore> sourceStore = sourceRef.getStore();
@@ -996,7 +1147,7 @@ public class TakaroRequestHandler {
                 return new Object[0];
             }
 
-            plugin.getLogger().at(java.util.logging.Level.INFO).log("Getting player inventory for gameId: " + gameId);
+            plugin.getLogger().at(java.util.logging.Level.FINE).log("Getting player inventory for gameId: " + gameId);
 
         com.hypixel.hytale.server.core.universe.Universe universe =
                 com.hypixel.hytale.server.core.universe.Universe.get();
@@ -1071,10 +1222,10 @@ public class TakaroRequestHandler {
 
                     inventoryItems.add(inventoryItem);
 
-                    plugin.getLogger().at(java.util.logging.Level.INFO).log("Inventory item: code=" + itemId + ", name=" + itemName + ", amount=" + quantity);
+                    plugin.getLogger().at(java.util.logging.Level.FINE).log("Inventory item: code=" + itemId + ", name=" + itemName + ", amount=" + quantity);
                 }
 
-                plugin.getLogger().at(java.util.logging.Level.INFO).log("Found " + inventoryItems.size() + " items in player inventory");
+                plugin.getLogger().at(java.util.logging.Level.FINE).log("Found " + inventoryItems.size() + " items in player inventory");
                 future.complete(null);
             } catch (Exception e) {
                 plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error reading inventory: " + e.getMessage());
@@ -1543,22 +1694,29 @@ public class TakaroRequestHandler {
                     Teleport teleport = new Teleport(world, position, rotation);
                     store.addComponent(ref, Teleport.getComponentType(), teleport);
                     future.complete("Teleported " + playerName + " to " + x + ", " + y + ", " + z);
-                } catch (Exception e) {
-                    plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error teleporting: " + e.getMessage());
+                } catch (Throwable e) {
+                    plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error teleporting: " + e.getClass().getName() + ": " + e.getMessage());
                     e.printStackTrace();
-                    future.complete("Error: " + e.getMessage());
+                    future.completeExceptionally(e);
                 }
             });
 
-            String resultMessage = future.get(5, TimeUnit.SECONDS);
+            String resultMessage;
+            try {
+                resultMessage = future.get(5, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Teleport future failed: " + e.getClass().getName() + ": " + e.getMessage());
+                e.printStackTrace();
+                resultMessage = "Error: " + e.getMessage();
+            }
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", !resultMessage.startsWith("Error"));
             result.put("rawResult", resultMessage);
             return result;
 
-        } catch (Exception e) {
-            plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error handling teleport command: " + e.getMessage());
+        } catch (Throwable e) {
+            plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error handling teleport command: " + e.getClass().getName() + ": " + e.getMessage());
             e.printStackTrace();
             Map<String, Object> result = new HashMap<>();
             result.put("success", false);
@@ -1651,12 +1809,24 @@ public class TakaroRequestHandler {
                         return;
                     }
                     positionFuture.complete(new Vector3d(targetTransform.getPosition()));
-                } catch (Exception e) {
+                } catch (Throwable e) {
+                    plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error getting target position: " + e.getClass().getName() + ": " + e.getMessage());
+                    e.printStackTrace();
                     positionFuture.completeExceptionally(e);
                 }
             });
 
-            Vector3d targetPosition = positionFuture.get(5, TimeUnit.SECONDS);
+            Vector3d targetPosition;
+            try {
+                targetPosition = positionFuture.get(5, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Failed to get target position: " + e.getClass().getName() + ": " + e.getMessage());
+                e.printStackTrace();
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("rawResult", "Error getting target position: " + e.getMessage());
+                return result;
+            }
 
             // Now teleport source player to target position
             Store<EntityStore> sourceStore = sourceRef.getStore();
@@ -1670,22 +1840,29 @@ public class TakaroRequestHandler {
                     Teleport teleport = new Teleport(targetWorld, targetPosition, rotation);
                     sourceStore.addComponent(sourceRef, Teleport.getComponentType(), teleport);
                     teleportFuture.complete("Teleported " + sourcePlayerName + " to " + targetPlayerName);
-                } catch (Exception e) {
-                    plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error teleporting: " + e.getMessage());
+                } catch (Throwable e) {
+                    plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error teleporting: " + e.getClass().getName() + ": " + e.getMessage());
                     e.printStackTrace();
-                    teleportFuture.complete("Error: " + e.getMessage());
+                    teleportFuture.completeExceptionally(e);
                 }
             });
 
-            String resultMessage = teleportFuture.get(5, TimeUnit.SECONDS);
+            String resultMessage;
+            try {
+                resultMessage = teleportFuture.get(5, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Teleport future failed: " + e.getClass().getName() + ": " + e.getMessage());
+                e.printStackTrace();
+                resultMessage = "Error: " + e.getMessage();
+            }
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", !resultMessage.startsWith("Error"));
             result.put("rawResult", resultMessage);
             return result;
 
-        } catch (Exception e) {
-            plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error handling teleport to player command: " + e.getMessage());
+        } catch (Throwable e) {
+            plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error handling teleport to player command: " + e.getClass().getName() + ": " + e.getMessage());
             e.printStackTrace();
             Map<String, Object> result = new HashMap<>();
             result.put("success", false);
@@ -1971,7 +2148,7 @@ public class TakaroRequestHandler {
             final String playerName = parts[1];
             final String color = parts[2];
 
-            plugin.getLogger().at(java.util.logging.Level.INFO).log("Console setcolor command: " + playerName + " -> " + color);
+            plugin.getLogger().at(java.util.logging.Level.FINE).log("Console setcolor command: " + playerName + " -> " + color);
 
             com.hypixel.hytale.server.core.universe.Universe universe =
                 com.hypixel.hytale.server.core.universe.Universe.get();
@@ -2092,6 +2269,14 @@ public class TakaroRequestHandler {
         help.append("HELP & INFO:\n");
         help.append("  - help (or: commands, getavailableactions, takarohelp, takaro)\n");
         help.append("    Shows this help menu\n\n");
+        help.append("  - testReachability\n");
+        help.append("    Test if server is reachable\n\n");
+        help.append("  - getPlayers\n");
+        help.append("    Get list of online players\n\n");
+        help.append("  - getServerInfo\n");
+        help.append("    Get server information\n\n");
+        help.append("  - listItems\n");
+        help.append("    Get list of all available items\n\n");
         help.append("  - listCommands\n");
         help.append("    Lists all available Hytale server commands\n\n");
         help.append("  - playerlocations (or: locations, whereis, players)\n");
@@ -2099,17 +2284,43 @@ public class TakaroRequestHandler {
         help.append("  - beds <player> (or: playerbeds)\n");
         help.append("    Shows all bed/respawn locations for a player\n");
         help.append("    Example: beds Hennyy\n\n");
+        help.append("MESSAGING:\n");
+        help.append("  - sendMessage <message>\n");
+        help.append("    Send message to all players (supports [red]text[-] or [ff0000]text[-])\n");
+        help.append("    Example: sendMessage Hello everyone!\n");
+        help.append("    Example: sendMessage [red]Warning[-] Server restart in 5 minutes\n\n");
+        help.append("PLAYER INFO:\n");
+        help.append("  - getPlayerLocation <player>\n");
+        help.append("    Get player's current coordinates\n");
+        help.append("    Example: getPlayerLocation Hennyy\n\n");
+        help.append("  - getPlayerInventory <player>\n");
+        help.append("    Get player's inventory (API limitations - may return empty)\n");
+        help.append("    Example: getPlayerInventory Mad001\n\n");
         help.append("PLAYER ACTIONS:\n");
         help.append("  - give <player> <item> [amount]\n");
+        help.append("    Give items to a player\n");
         help.append("    Example: give Mad001 Wood_Oak_Trunk 10\n\n");
         help.append("  - teleportPlayer <player> <x> <y> <z> (or: tp)\n");
+        help.append("    Teleport player to coordinates\n");
         help.append("    Example: tp Hennyy 100 64 200\n\n");
         help.append("  - teleportPlayerToPlayer <player> <targetPlayer> (or: tpp)\n");
+        help.append("    Teleport player to another player\n");
         help.append("    Example: tpp Hennyy Mad001\n\n");
         help.append("  - setcolor <player> <color> (or: namecolor)\n");
         help.append("    Set a player's chat name color\n");
         help.append("    Example: setcolor Mad001 gold\n");
         help.append("    Example: namecolor Hennyy ff0000\n\n");
+        help.append("MODERATION:\n");
+        help.append("  - kickPlayer <player> [reason]\n");
+        help.append("    Kick a player from the server\n");
+        help.append("    Example: kickPlayer Hennyy\n");
+        help.append("    Example: kickPlayer Mad001 Breaking rules\n\n");
+        help.append("  - banPlayer <player>\n");
+        help.append("    Ban a player (not implemented)\n");
+        help.append("    Example: banPlayer Griefer123\n\n");
+        help.append("  - unbanPlayer <player>\n");
+        help.append("    Unban a player (not implemented)\n");
+        help.append("    Example: unbanPlayer Griefer123\n\n");
         help.append("STANDARD HYTALE:\n");
         help.append("  - who, version, kick, etc. (all standard Hytale commands work)\n\n");
 
@@ -2137,6 +2348,14 @@ public class TakaroRequestHandler {
         getPlayers.put("payload", "{}");
         getPlayers.put("returns", "[{\"name\": \"PlayerName\", \"gameId\": \"uuid\", \"platformId\": \"hytale:uuid\", \"ip\": \"127.0.0.1\"}]");
         actions.add(getPlayers);
+
+        // getPlayer
+        Map<String, Object> getPlayer = new HashMap<>();
+        getPlayer.put("action", "getPlayer");
+        getPlayer.put("description", "Get information about a specific player by gameId or name");
+        getPlayer.put("payload", "{\"args\": \"{\\\"gameId\\\":\\\"player-uuid\\\"}\"}");
+        getPlayer.put("returns", "{\"name\": \"PlayerName\", \"gameId\": \"uuid\", \"platformId\": \"hytale:uuid\", \"ip\": \"127.0.0.1\"}");
+        actions.add(getPlayer);
 
         // getServerInfo
         Map<String, Object> getServerInfo = new HashMap<>();
@@ -2252,5 +2471,145 @@ public class TakaroRequestHandler {
 
         plugin.getLogger().at(java.util.logging.Level.INFO).log("Returning " + actions.size() + " available actions");
         return actions;
+    }
+
+    // Helper methods for console command shortcuts
+
+    private Object getPlayerInventoryByName(String playerName) {
+        try {
+            String gameId = getGameIdByName(playerName);
+            if (gameId == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("error", "Player not found: " + playerName);
+                return error;
+            }
+
+            JsonObject payload = new JsonObject();
+            JsonObject args = new JsonObject();
+            args.addProperty("gameId", gameId);
+            payload.addProperty("args", gson.toJson(args));
+            return handleGetPlayerInventory(payload);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", e.getMessage());
+            return error;
+        }
+    }
+
+    private Object getPlayerLocationByName(String playerName) {
+        try {
+            String gameId = getGameIdByName(playerName);
+            if (gameId == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("error", "Player not found: " + playerName);
+                return error;
+            }
+
+            JsonObject payload = new JsonObject();
+            JsonObject args = new JsonObject();
+            args.addProperty("gameId", gameId);
+            payload.addProperty("args", gson.toJson(args));
+            return handleGetPlayerLocation(payload);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", e.getMessage());
+            return error;
+        }
+    }
+
+    private Object kickPlayerByName(String playerName, String reason) {
+        try {
+            String gameId = getGameIdByName(playerName);
+            if (gameId == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("error", "Player not found: " + playerName);
+                return error;
+            }
+
+            JsonObject payload = new JsonObject();
+            JsonObject args = new JsonObject();
+            args.addProperty("gameId", gameId);
+            args.addProperty("reason", reason);
+            payload.addProperty("args", gson.toJson(args));
+            return handleKickPlayer(payload);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", e.getMessage());
+            return error;
+        }
+    }
+
+    private Object banPlayerByName(String playerName) {
+        try {
+            String gameId = getGameIdByName(playerName);
+            if (gameId == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("error", "Player not found: " + playerName);
+                return error;
+            }
+
+            JsonObject payload = new JsonObject();
+            JsonObject args = new JsonObject();
+            args.addProperty("gameId", gameId);
+            payload.addProperty("args", gson.toJson(args));
+            return handleBanPlayer(payload);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", e.getMessage());
+            return error;
+        }
+    }
+
+    private Object unbanPlayerByName(String playerName) {
+        try {
+            String gameId = getGameIdByName(playerName);
+            if (gameId == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("error", "Player not found: " + playerName);
+                return error;
+            }
+
+            JsonObject payload = new JsonObject();
+            JsonObject args = new JsonObject();
+            args.addProperty("gameId", gameId);
+            payload.addProperty("args", gson.toJson(args));
+            return handleUnbanPlayer(payload);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", e.getMessage());
+            return error;
+        }
+    }
+
+    private String getGameIdByName(String playerName) {
+        try {
+            com.hypixel.hytale.server.core.universe.Universe universe =
+                com.hypixel.hytale.server.core.universe.Universe.get();
+
+            if (universe == null) {
+                return null;
+            }
+
+            List<PlayerRef> players = universe.getPlayers();
+            for (PlayerRef player : players) {
+                if (player.getUsername().equalsIgnoreCase(playerName)) {
+                    return player.getUuid().toString();
+                }
+            }
+            return null;
+        } catch (Exception e) {
+            plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error getting gameId by name: " + e.getMessage());
+            return null;
+        }
     }
 }

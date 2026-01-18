@@ -1,7 +1,7 @@
 {
-  "Group": "dev.takaro",
-  "Name": "HytaleTakaroIntegration",
-  "Version": "1.0.0",
+  "Group": "",
+  "Name": "TakaroConfig",
+  "Version": "1.1.0",
   "Description": "Integrates Hytale server with Takaro platform for advanced game server management",
   "Authors": [
     {
