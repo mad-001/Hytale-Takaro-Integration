@@ -37,13 +37,13 @@ public class PlayerEventListener {
             }
 
             // Build connect event for Takaro
+            // Match Palworld bridge format exactly: name, gameId, steamId (no platformId, no position)
             Map<String, Object> eventData = new HashMap<>();
 
-            Map<String, Object> player = new HashMap<>();
+            Map<String, String> player = new HashMap<>();
             player.put("name", playerName);
             player.put("gameId", uuid);
-            player.put("platformId", "hytale:" + uuid);
-            // NOTE: Do NOT include position data - Takaro rejects it with whitelistValidation error
+            player.put("steamId", uuid);  // Hytale uses UUID for both
 
             eventData.put("player", player);
 
@@ -83,13 +83,13 @@ public class PlayerEventListener {
             }
 
             // Build disconnect event for Takaro
+            // Match Palworld bridge format exactly: name, gameId, steamId (no platformId, no position)
             Map<String, Object> eventData = new HashMap<>();
 
-            Map<String, Object> player = new HashMap<>();
+            Map<String, String> player = new HashMap<>();
             player.put("name", playerName);
             player.put("gameId", uuid);
-            player.put("platformId", "hytale:" + uuid);
-            // NOTE: Do NOT include position data - Takaro rejects it with whitelistValidation error
+            player.put("steamId", uuid);  // Hytale uses UUID for both
 
             eventData.put("player", player);
 
