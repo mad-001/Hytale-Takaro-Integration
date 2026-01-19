@@ -40,7 +40,7 @@ public class TakaroRequestHandler {
         this.hytaleApi = hytaleApi;
     }
 
-    public void handleRequest(String requestId, String action, JsonObject payload) {
+    public void handleRequest(dev.takaro.hytale.websocket.TakaroWebSocket sourceWebSocket, String requestId, String action, JsonObject payload) {
         Object responsePayload;
 
         try {
@@ -92,8 +92,10 @@ public class TakaroRequestHandler {
                     responsePayload = handleListCommands();
                     break;
                 case "getAvailableActions":
-                case "help":
                     responsePayload = handleGetAvailableActions();
+                    break;
+                case "help":
+                    responsePayload = buildHelpResponse();
                     break;
                 case "getPlayerInventory":
                     responsePayload = handleGetPlayerInventory(payload);
@@ -125,7 +127,8 @@ public class TakaroRequestHandler {
             responsePayload = error;
         }
 
-        plugin.getWebSocket().sendResponse(requestId, responsePayload);
+        // Send response back to the WebSocket that sent the request
+        sourceWebSocket.sendResponse(requestId, responsePayload);
     }
 
     private Object handleTestReachability() {
@@ -336,9 +339,9 @@ public class TakaroRequestHandler {
             // We need to parse the args string as JSON
             String argsString = payload.get("args").getAsString();
             JsonObject args = gson.fromJson(argsString, JsonObject.class);
-            String command = args.get("command").getAsString();
+            String command = args.get("command").getAsString().trim();
 
-            plugin.getLogger().at(java.util.logging.Level.FINE).log("Executing console command: " + command);
+            plugin.getLogger().at(java.util.logging.Level.INFO).log("Executing console command: '" + command + "'");
 
             // Check if it's a request for help/documentation
             if (command.equalsIgnoreCase("help") ||
@@ -432,6 +435,7 @@ public class TakaroRequestHandler {
 
             // Check if it's a give command
             if (command.toLowerCase().startsWith("give ")) {
+                plugin.getLogger().at(java.util.logging.Level.INFO).log("Matched give command, calling handler");
                 return handleGiveConsoleCommand(command);
             }
 
@@ -550,11 +554,22 @@ public class TakaroRequestHandler {
                 return result;
             }
 
-            UUID playerUuid = UUID.fromString(gameId);
-            PlayerRef playerRef = universe.getPlayers().stream()
-                .filter(p -> p.getUuid().equals(playerUuid))
-                .findFirst()
-                .orElse(null);
+            // Support both UUID and player name
+            PlayerRef playerRef;
+            try {
+                UUID playerUuid = UUID.fromString(gameId);
+                playerRef = universe.getPlayers().stream()
+                    .filter(p -> p.getUuid().equals(playerUuid))
+                    .findFirst()
+                    .orElse(null);
+            } catch (IllegalArgumentException e) {
+                // Not a UUID, try as player name
+                final String playerName = gameId;
+                playerRef = universe.getPlayers().stream()
+                    .filter(p -> p.getUsername().equalsIgnoreCase(playerName))
+                    .findFirst()
+                    .orElse(null);
+            }
 
             if (playerRef == null) {
                 Map<String, Object> result = new HashMap<>();
@@ -1475,24 +1490,27 @@ public class TakaroRequestHandler {
                     String code = entry.getKey();
                     Item item = entry.getValue();
 
-                    // Clean up item name - remove "server.items." prefix and ".name" suffix
-                    String itemName = item.getTranslationKey();
-                    String originalName = itemName;
-                    if (itemName.startsWith("server.items.")) {
-                        itemName = itemName.substring("server.items.".length());
-                    }
-                    if (itemName.endsWith(".name")) {
-                        itemName = itemName.substring(0, itemName.length() - ".name".length());
+                    // Get friendly display name from I18n
+                    String friendlyName = code; // Fallback to code
+                    try {
+                        String translationKey = item.getTranslationKey();
+                        String i18nName = com.hypixel.hytale.server.core.modules.i18n.I18nModule.get()
+                            .getMessage("en_us", translationKey);
+                        if (i18nName != null && !i18nName.isEmpty()) {
+                            friendlyName = i18nName;
+                        }
+                    } catch (Exception e) {
+                        // Use code as fallback if I18n fails
                     }
 
-                    itemInfo.put("code", code);
-                    itemInfo.put("name", itemName);
+                    itemInfo.put("code", code);  // Technical ID for giveItem
+                    itemInfo.put("name", friendlyName);  // Friendly display name
                     itemInfo.put("description", item.getDescriptionTranslationKey());
                     itemList.add(itemInfo);
 
-                    // Log first 3 items to verify cleanup
+                    // Log first 3 items to verify
                     if (itemList.size() <= 3) {
-                        plugin.getLogger().at(java.util.logging.Level.INFO).log("Item: code=" + code + ", original=" + originalName + ", cleaned=" + itemName);
+                        plugin.getLogger().at(java.util.logging.Level.INFO).log("Item: code=" + code + ", name=" + friendlyName);
                     }
                 } catch (Exception itemEx) {
                     plugin.getLogger().at(java.util.logging.Level.WARNING).log("Error processing item " + entry.getKey() + ": " + itemEx.getMessage());

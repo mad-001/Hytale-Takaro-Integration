@@ -56,10 +56,6 @@ public class TakaroLogHandler {
      * Forward accumulated logs to Takaro
      */
     private void forwardLogs() {
-        if (!plugin.getWebSocket().isIdentified()) {
-            return;
-        }
-
         if (logBuffer.isEmpty()) {
             return;
         }
@@ -93,8 +89,8 @@ public class TakaroLogHandler {
             Map<String, Object> logData = new HashMap<>();
             logData.put("msg", formattedLog);
 
-            // Send to Takaro
-            plugin.getWebSocket().sendGameEvent("log", logData);
+            // Send to all Takaro connections (production and dev if enabled)
+            plugin.sendGameEventToAll("log", logData);
 
         } catch (Exception e) {
             // Don't log errors here to avoid infinite loop

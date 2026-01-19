@@ -53,11 +53,6 @@ public class ChatEventListener {
                 ChatFormatter.onPlayerChat(event);
             }
 
-            // Don't forward if not connected to Takaro
-            if (!plugin.getWebSocket().isIdentified()) {
-                return;
-            }
-
             // Build chat event for Takaro (don't include "type" - that's added by sendGameEvent)
             Map<String, Object> chatData = new HashMap<>();
             chatData.put("msg", message);
@@ -70,8 +65,8 @@ public class ChatEventListener {
 
             chatData.put("player", player);
 
-            // Send to Takaro
-            plugin.getWebSocket().sendGameEvent("chat-message", chatData);
+            // Send to all Takaro connections (production and dev if enabled)
+            plugin.sendGameEventToAll("chat-message", chatData);
             plugin.getLogger().at(java.util.logging.Level.FINE).log("Forwarded chat message to Takaro");
 
         } catch (Exception e) {

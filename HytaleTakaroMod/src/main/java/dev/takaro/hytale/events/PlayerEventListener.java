@@ -31,24 +31,18 @@ public class PlayerEventListener {
 
             plugin.getLogger().at(java.util.logging.Level.FINE).log("[EVENT] Player connected: " + playerName);
 
-            // Don't forward if not connected to Takaro
-            if (!plugin.getWebSocket().isIdentified()) {
-                return;
-            }
-
             // Build connect event for Takaro
-            // Match Palworld bridge format exactly: name, gameId, steamId (no platformId, no position)
             Map<String, Object> eventData = new HashMap<>();
 
             Map<String, String> player = new HashMap<>();
             player.put("name", playerName);
             player.put("gameId", uuid);
-            player.put("steamId", uuid);  // Hytale uses UUID for both
+            player.put("platformId", "hytale:" + uuid);
 
             eventData.put("player", player);
 
-            // Send to Takaro
-            plugin.getWebSocket().sendGameEvent("player-connected", eventData);
+            // Send to all Takaro connections (production and dev if enabled)
+            plugin.sendGameEventToAll("player-connected", eventData);
             plugin.getLogger().at(java.util.logging.Level.FINE).log("Forwarded player connect to Takaro");
 
         } catch (Exception e) {
@@ -77,24 +71,18 @@ public class PlayerEventListener {
             }
             lastDisconnectTime.put(uuid, currentTime);
 
-            // Don't forward if not connected to Takaro
-            if (!plugin.getWebSocket().isIdentified()) {
-                return;
-            }
-
             // Build disconnect event for Takaro
-            // Match Palworld bridge format exactly: name, gameId, steamId (no platformId, no position)
             Map<String, Object> eventData = new HashMap<>();
 
             Map<String, String> player = new HashMap<>();
             player.put("name", playerName);
             player.put("gameId", uuid);
-            player.put("steamId", uuid);  // Hytale uses UUID for both
+            player.put("platformId", "hytale:" + uuid);
 
             eventData.put("player", player);
 
-            // Send to Takaro
-            plugin.getWebSocket().sendGameEvent("player-disconnected", eventData);
+            // Send to all Takaro connections (production and dev if enabled)
+            plugin.sendGameEventToAll("player-disconnected", eventData);
 
         } catch (Exception e) {
             plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error handling player disconnect: " + e.getMessage());

@@ -17,15 +17,17 @@ import dev.takaro.hytale.websocket.TakaroWebSocket;
 
 import javax.annotation.Nonnull;
 import java.io.File;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class TakaroPlugin extends JavaPlugin {
-    private static final String VERSION = "1.7.8";
+    private static final String VERSION = "1.8.5";
     private TakaroConfig config;
     private TakaroWebSocket webSocket;
+    private TakaroWebSocket devWebSocket; // Optional dev Takaro connection
     private TakaroRequestHandler requestHandler;
     private HytaleApiClient hytaleApi; // Hidden feature - not in user config yet
     private ChatEventListener chatListener;
@@ -143,13 +145,26 @@ public class TakaroPlugin extends JavaPlugin {
             getLogger().at(java.util.logging.Level.WARNING).log("Could not check items at startup: " + e.getMessage());
         }
 
+        // Connect to production Takaro
         try {
-            webSocket = new TakaroWebSocket(this, config);
+            webSocket = new TakaroWebSocket(this, config, false); // false = production
             webSocket.connect();
             getLogger().at(java.util.logging.Level.INFO).log("Connecting to Takaro at " + config.getWsUrl());
         } catch (Exception e) {
             getLogger().at(java.util.logging.Level.SEVERE).log("Failed to start WebSocket connection: " + e.getMessage());
             e.printStackTrace();
+        }
+
+        // Connect to dev Takaro (if enabled)
+        if (config.isDevEnabled()) {
+            try {
+                devWebSocket = new TakaroWebSocket(this, config, true); // true = dev
+                devWebSocket.connect();
+                getLogger().at(java.util.logging.Level.INFO).log("Connecting to Dev Takaro at " + config.getDevWsUrl());
+            } catch (Exception e) {
+                getLogger().at(java.util.logging.Level.SEVERE).log("Failed to start Dev WebSocket connection: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
 
         // Start telemetry reporting to Hytale API (optional - only if token configured)
@@ -197,17 +212,25 @@ public class TakaroPlugin extends JavaPlugin {
             webSocket.shutdown();
         }
 
+        if (devWebSocket != null) {
+            devWebSocket.shutdown();
+        }
+
         if (hytaleApi != null) {
             hytaleApi.shutdown();
         }
     }
 
-    public void handleTakaroRequest(String requestId, String action, JsonObject payload) {
-        requestHandler.handleRequest(requestId, action, payload);
+    public void handleTakaroRequest(TakaroWebSocket sourceWebSocket, String requestId, String action, JsonObject payload) {
+        requestHandler.handleRequest(sourceWebSocket, requestId, action, payload);
     }
 
     public TakaroWebSocket getWebSocket() {
         return webSocket;
+    }
+
+    public TakaroWebSocket getDevWebSocket() {
+        return devWebSocket;
     }
 
     public TakaroConfig getConfig() {
@@ -216,6 +239,23 @@ public class TakaroPlugin extends JavaPlugin {
 
     public String getVersion() {
         return VERSION;
+    }
+
+    /**
+     * Send game event to all active Takaro connections (production and dev if enabled)
+     * @param eventType Type of event
+     * @param data Event data
+     */
+    public void sendGameEventToAll(String eventType, Map<String, Object> data) {
+        // Send to production
+        if (webSocket != null) {
+            webSocket.sendGameEvent(eventType, data);
+        }
+        // Send to dev (if enabled and connected)
+        // Dev Takaro doesn't support log events, skip those
+        if (devWebSocket != null && !eventType.equals("log")) {
+            devWebSocket.sendGameEvent(eventType, data);
+        }
     }
 
     /**

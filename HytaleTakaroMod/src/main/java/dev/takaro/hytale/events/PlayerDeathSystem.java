@@ -67,11 +67,6 @@ public class PlayerDeathSystem extends RefChangeSystem<EntityStore, DeathCompone
 
             plugin.getLogger().at(java.util.logging.Level.FINE).log("[EVENT] Player died: " + playerName);
 
-            // Don't forward if not connected to Takaro
-            if (!plugin.getWebSocket().isIdentified()) {
-                return;
-            }
-
             // Get player's position at time of death
             TransformComponent transform = commandBuffer.getComponent(ref, TransformComponent.getComponentType());
 
@@ -100,8 +95,8 @@ public class PlayerDeathSystem extends RefChangeSystem<EntityStore, DeathCompone
                 eventData.put("msg", "Death cause: " + deathComponent.getDeathCause().getId());
             }
 
-            // Send to Takaro (note: event type is "player-death" not "player-died")
-            plugin.getWebSocket().sendGameEvent("player-death", eventData);
+            // Send to all Takaro connections (production and dev if enabled)
+            plugin.sendGameEventToAll("player-death", eventData);
 
         } catch (Exception e) {
             plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error handling player death: " + e.getMessage());
