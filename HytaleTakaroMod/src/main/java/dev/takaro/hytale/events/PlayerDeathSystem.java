@@ -71,13 +71,13 @@ public class PlayerDeathSystem extends RefChangeSystem<EntityStore, DeathCompone
             TransformComponent transform = commandBuffer.getComponent(ref, TransformComponent.getComponentType());
 
             // Build death event for Takaro
-            Map<String, Object> eventData = new HashMap<>();
-
-            Map<String, String> player = new HashMap<>();
+            Map<String, Object> player = new HashMap<>();
             player.put("name", playerName);
             player.put("gameId", uuid);
             player.put("platformId", "hytale:" + uuid);
 
+            Map<String, Object> eventData = new HashMap<>();
+            eventData.put("type", "player-death");
             eventData.put("player", player);
 
             // Add position if available
@@ -92,7 +92,9 @@ public class PlayerDeathSystem extends RefChangeSystem<EntityStore, DeathCompone
             // Add death cause as message if available
             Damage deathInfo = deathComponent.getDeathInfo();
             if (deathInfo != null && deathComponent.getDeathCause() != null) {
-                eventData.put("msg", "Death cause: " + deathComponent.getDeathCause().getId());
+                eventData.put("msg", playerName + " died: " + deathComponent.getDeathCause().getId());
+            } else {
+                eventData.put("msg", playerName + " died");
             }
 
             // Send to all Takaro connections (production and dev if enabled)

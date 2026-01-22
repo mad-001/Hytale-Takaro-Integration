@@ -263,15 +263,26 @@ public class TakaroRequestHandler {
         try {
             // Parse args if it exists, otherwise try direct message field
             String message;
+            String recipientGameId = null;
+
             if (payload.has("args")) {
                 String argsString = payload.get("args").getAsString();
                 JsonObject args = gson.fromJson(argsString, JsonObject.class);
                 message = args.get("message").getAsString();
+
+                // Check for opts.recipient.gameId for private messages
+                if (args.has("opts")) {
+                    JsonObject opts = args.getAsJsonObject("opts");
+                    if (opts.has("recipient")) {
+                        JsonObject recipient = opts.getAsJsonObject("recipient");
+                        if (recipient.has("gameId")) {
+                            recipientGameId = recipient.get("gameId").getAsString();
+                        }
+                    }
+                }
             } else {
                 message = payload.get("message").getAsString();
             }
-
-            plugin.getLogger().at(java.util.logging.Level.FINE).log("Sending message to all players: " + message);
 
             com.hypixel.hytale.server.core.universe.Universe universe =
                 com.hypixel.hytale.server.core.universe.Universe.get();
@@ -283,19 +294,47 @@ public class TakaroRequestHandler {
                 return result;
             }
 
-            List<PlayerRef> players = universe.getPlayers();
+            // Parse message from Takaro with clickable links
+            Message msg = ChatFormatter.parseTakaroMessage(message);
 
-            // Parse color codes in message from Takaro
-            Message msg = ChatFormatter.parseColoredMessage(message);
+            // If recipient is specified, send private message
+            if (recipientGameId != null) {
+                plugin.getLogger().at(java.util.logging.Level.FINE).log("Sending private message to player: " + recipientGameId);
 
-            for (PlayerRef player : players) {
-                player.sendMessage(msg);
+                final String targetGameId = recipientGameId;
+                PlayerRef targetPlayer = universe.getPlayers().stream()
+                    .filter(p -> p.getUuid().toString().equals(targetGameId))
+                    .findFirst()
+                    .orElse(null);
+
+                if (targetPlayer == null) {
+                    plugin.getLogger().at(java.util.logging.Level.WARNING).log("Target player not found: " + recipientGameId);
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("success", false);
+                    result.put("error", "Player not found: " + recipientGameId);
+                    return result;
+                }
+
+                targetPlayer.sendMessage(msg);
+                plugin.getLogger().at(java.util.logging.Level.FINE).log("Private message sent to player: " + targetPlayer.getUsername());
+
+                Map<String, Boolean> result = new HashMap<>();
+                result.put("success", true);
+                return result;
+            } else {
+                // Send to all players (broadcast)
+                plugin.getLogger().at(java.util.logging.Level.FINE).log("Sending message to all players: " + message);
+                List<PlayerRef> players = universe.getPlayers();
+
+                for (PlayerRef player : players) {
+                    player.sendMessage(msg);
+                }
+
+                plugin.getLogger().at(java.util.logging.Level.FINE).log("Message sent to " + players.size() + " players");
+                Map<String, Boolean> result = new HashMap<>();
+                result.put("success", true);
+                return result;
             }
-
-            plugin.getLogger().at(java.util.logging.Level.FINE).log("Message sent to " + players.size() + " players");
-            Map<String, Boolean> result = new HashMap<>();
-            result.put("success", true);
-            return result;
         } catch (Exception e) {
             plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error sending message: " + e.getMessage());
             e.printStackTrace();
@@ -368,7 +407,11 @@ public class TakaroRequestHandler {
                 return handleGetServerInfo();
             }
             if (command.equalsIgnoreCase("listItems")) {
-                return handleListItems();
+                List<Map<String, Object>> items = (List<Map<String, Object>>) handleListItems();
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", true);
+                result.put("rawResult", "Found " + items.size() + " items. Use Takaro UI to view item list.");
+                return result;
             }
 
             // sendMessage <message>
@@ -528,6 +571,8 @@ public class TakaroRequestHandler {
             String gameId;
             if (args.has("gameId")) {
                 gameId = args.get("gameId").getAsString();
+            } else if (args.has("player") && args.get("player").isJsonObject() && args.getAsJsonObject("player").has("gameId")) {
+                gameId = args.getAsJsonObject("player").get("gameId").getAsString();
             } else if (payload.has("playerId")) {
                 gameId = payload.get("playerId").getAsString();
             } else if (payload.has("gameId")) {
@@ -644,6 +689,8 @@ public class TakaroRequestHandler {
             String gameId;
             if (args.has("gameId")) {
                 gameId = args.get("gameId").getAsString();
+            } else if (args.has("player") && args.get("player").isJsonObject() && args.getAsJsonObject("player").has("gameId")) {
+                gameId = args.getAsJsonObject("player").get("gameId").getAsString();
             } else if (payload.has("playerId")) {
                 gameId = payload.get("playerId").getAsString();
             } else if (payload.has("gameId")) {
@@ -985,6 +1032,8 @@ public class TakaroRequestHandler {
             String gameId;
             if (args.has("gameId")) {
                 gameId = args.get("gameId").getAsString();
+            } else if (args.has("player") && args.get("player").isJsonObject() && args.getAsJsonObject("player").has("gameId")) {
+                gameId = args.getAsJsonObject("player").get("gameId").getAsString();
             } else if (payload.has("playerId")) {
                 gameId = payload.get("playerId").getAsString();
             } else if (payload.has("gameId")) {
@@ -1217,27 +1266,32 @@ public class TakaroRequestHandler {
 
                     // Get item details
                     String itemId = itemStack.getItemId();
-                    Item item = itemStack.getItem();
                     int quantity = itemStack.getQuantity();
 
-                    // Clean up item name - remove "server.items." prefix and ".name" suffix
-                    String itemName = item.getId();
-                    if (itemName.startsWith("server.items.")) {
-                        itemName = itemName.substring("server.items.".length());
-                    }
-                    if (itemName.endsWith(".name")) {
-                        itemName = itemName.substring(0, itemName.length() - ".name".length());
+                    // Get friendly name for the item
+                    String friendlyName = itemId;
+                    try {
+                        Item item = Item.getAssetMap().getAssetMap().get(itemId);
+                        if (item != null) {
+                            String translationKey = item.getTranslationKey();
+                            if (translationKey != null) {
+                                String i18n = com.hypixel.hytale.server.core.modules.i18n.I18nModule.get().getMessage("en-US", translationKey);
+                                if (i18n != null && !i18n.isEmpty()) {
+                                    friendlyName = i18n;
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        // Fall back to code if name lookup fails
                     }
 
                     // Create inventory item entry
                     Map<String, Object> inventoryItem = new HashMap<>();
                     inventoryItem.put("code", itemId);
-                    inventoryItem.put("name", itemName);
+                    inventoryItem.put("name", friendlyName);
                     inventoryItem.put("amount", quantity);
 
                     inventoryItems.add(inventoryItem);
-
-                    plugin.getLogger().at(java.util.logging.Level.FINE).log("Inventory item: code=" + itemId + ", name=" + itemName + ", amount=" + quantity);
                 }
 
                 plugin.getLogger().at(java.util.logging.Level.FINE).log("Found " + inventoryItems.size() + " items in player inventory");
@@ -1482,38 +1536,34 @@ public class TakaroRequestHandler {
                 return new Object[0];
             }
 
-            List<Map<String, Object>> itemList = new ArrayList<>();
+            List<Map<String, String>> itemList = new ArrayList<>();
 
             for (Map.Entry<String, Item> entry : items.entrySet()) {
+                String code = entry.getKey();
+                if (code == null || code.isEmpty()) continue;
+
+                Item item = entry.getValue();
+                if (item == null) continue;
+
                 try {
-                    Map<String, Object> itemInfo = new HashMap<>();
-                    String code = entry.getKey();
-                    Item item = entry.getValue();
-
-                    // Get friendly display name from I18n
-                    String friendlyName = code; // Fallback to code
-                    try {
-                        String translationKey = item.getTranslationKey();
-                        String i18nName = com.hypixel.hytale.server.core.modules.i18n.I18nModule.get()
-                            .getMessage("en_us", translationKey);
-                        if (i18nName != null && !i18nName.isEmpty()) {
-                            friendlyName = i18nName;
+                    String friendlyName = code;
+                    String translationKey = item.getTranslationKey();
+                    if (translationKey != null) {
+                        String i18n = com.hypixel.hytale.server.core.modules.i18n.I18nModule.get().getMessage("en-US", translationKey);
+                        if (i18n != null && !i18n.isEmpty()) {
+                            friendlyName = i18n;
                         }
-                    } catch (Exception e) {
-                        // Use code as fallback if I18n fails
                     }
 
-                    itemInfo.put("code", code);  // Technical ID for giveItem
-                    itemInfo.put("name", friendlyName);  // Friendly display name
-                    itemInfo.put("description", item.getDescriptionTranslationKey());
+                    Map<String, String> itemInfo = new HashMap<>();
+                    itemInfo.put("code", code);
+                    itemInfo.put("name", friendlyName);
                     itemList.add(itemInfo);
-
-                    // Log first 3 items to verify
-                    if (itemList.size() <= 3) {
-                        plugin.getLogger().at(java.util.logging.Level.INFO).log("Item: code=" + code + ", name=" + friendlyName);
-                    }
-                } catch (Exception itemEx) {
-                    plugin.getLogger().at(java.util.logging.Level.WARNING).log("Error processing item " + entry.getKey() + ": " + itemEx.getMessage());
+                } catch (Exception e) {
+                    Map<String, String> itemInfo = new HashMap<>();
+                    itemInfo.put("code", code);
+                    itemInfo.put("name", code);
+                    itemList.add(itemInfo);
                 }
             }
 
@@ -1522,7 +1572,7 @@ public class TakaroRequestHandler {
         } catch (Exception e) {
             plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error listing items: " + e.getMessage());
             e.printStackTrace();
-            return new Object[0];
+            return new ArrayList<>();
         }
     }
 

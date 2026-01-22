@@ -1,64 +1,78 @@
-# Hytale Takaro Integration
+# Hytale-Takaro Integration
 
-Hytale server plugin that integrates with Takaro (https://takaro.io/) for server management and automation.
+This mod connects your Hytale server to Takaro, giving you:
+- **Discord Integration** - Player join/leave notifications, chat relay
+- **Remote Management** - Execute commands, give items, teleport players
+- **Advanced Automation** - Hooks, cronjobs, and custom commands
+- **Player Tracking** - Real-time player locations and statistics
+- **Item Management** - Complete item database integration
 
 ## Features
 
-- **Player Events**: Forwards player connect/disconnect events to Takaro
-- **Chat Integration**: Forwards chat messages and supports color formatting with `[color]text[-]` syntax
-- **Console Commands**: Execute Hytale commands from Takaro console
-- **API Actions**:
-  - `getPlayers` - Get list of online players
-  - `giveItem` - Give items to players
-  - `kickPlayer` - Kick players from server
-  - `teleportPlayer` - Teleport players to coordinates
-  - `teleportPlayerToPlayer` - Teleport one player to another
-  - `getPlayerLocation` - Get player coordinates
-  - `sendMessage` - Send messages to all players
-  - `listItems` - List all available items for Takaro shop
-  - `listCommands` - List available console commands
-  - And more...
+### Events
+- ✅ Player join/leave notifications
+- ✅ Chat message relay
+- ✅ Real-time player tracking
 
-## Setup
+### Commands
+- ✅ Execute console commands remotely
+- ✅ Send messages to players
+- ✅ Give items to players
+- ✅ Teleport players
+- ✅ Kick/ban/unban players
+- ✅ Execute ANY console command
 
-1. Build the mod: `mvn clean package`
-2. Copy `target/HytaleTakaroMod-1.0.0.jar` to your Hytale server's mods folder
-3. Configure `config.properties` with your Takaro connection details
-4. Restart your Hytale server
+### Information
+- ✅ Player list with locations
+- ✅ Server info and status
+- ✅ Complete items database
+- ✅ Player inventory viewing
 
-## Configuration
+## Installation
 
-Create `config.properties` in the mod's data directory with:
+### Prerequisites
+- Hytale dedicated server
+- [Takaro account](https://takaro.io) (free)
+
+### Get a Takaro Account
+1. Go to [Takaro](https://takaro.io) and fill out the survey
+2. Join [Discord](https://discord.gg/pwenDRrtnA) and ask for an invite
+
+### Server Setup
+1. Download the mod JAR file
+2. Copy to your Hytale server's `mods` folder
+3. Start your server to generate the config file
+4. Stop the server
+
+### Configuration
+Edit `\Hytale\Server\mods\dev.takaro_HytaleTakaroIntegration\config.properties`:
 
 ```properties
-TAKARO_WS_URL=wss://connect.takaro.io/
-TAKARO_IDENTITY_TOKEN=your_token_here
-TAKARO_REGISTRATION_TOKEN=your_registration_token
-HYTALE_API_URL=https://api.hytale.com
-HYTALE_API_TOKEN=your_hytale_token
+# Get these from your Takaro dashboard
+IDENTITY_TOKEN=NAME-YOUR-SERVER-WHATEVER-YOU-WANT
+REGISTRATION_TOKEN=GET_THIS_FROM_THE_DIRECTIONS_BELOW
 ```
 
-## Player Identification
+**Where to get tokens:**
+1. Go to your [Takaro dashboard](https://takaro.io)
+2. Navigate to Settings → Game Servers
+3. Click "Add Game Server"
+4. Select "Generic" as the game type
+5. Copy the Registration Token
+6. Paste into `dev.takaro_HytaleTakaroIntegration` and replace `GET_THIS_FROM_THE_DIRECTIONS_BELOW`
 
-Players are identified using the `platformId` format: `hytale:<uuid>`
+### Start Server
+Start your Hytale server and the mod will automatically connect to Takaro!
 
-This ensures proper player tracking without interfering with Steam/Epic/Xbox integrations.
+## Support
+- **Issues/Bugs**: [GitHub Issues](https://github.com/gettakaro/Hytale-Takaro-Integration/issues)
+- **Discord**: [Takaro Discord](https://discord.gg/pwenDRrtnA)
+- **Documentation**: [Takaro Docs](https://docs.takaro.io)
 
-## Color Chat Formatting
+## Links
+- **Takaro Platform**: https://takaro.io
+- **Source Code**: https://github.com/mad-001/Hytale-Takaro-Integration
+- **Takaro Documentation**: https://docs.takaro.io
 
-Players can use color codes in chat:
-- Named colors: `[red]text[-]`, `[blue]text[-]`, etc.
-- Hex colors: `[ff0000]text[-]`
-
-Supported named colors: red, green, blue, yellow, orange, pink, white, black, gray, cyan, magenta, purple, gold, lime, aqua
-
-## Development
-
-Built with:
-- Java 21
-- Maven 3.9.9
-- Hytale Server API
-
-## License
-
-MIT
+## Credits
+Developed by the Takaro team for the Hytale community.

@@ -53,6 +53,9 @@ public class TakaroDebugCommand extends CommandBase {
             case "methods":
                 showServerMethods(context);
                 break;
+            case "testlink":
+                testClickableLink(context);
+                break;
             default:
                 sendHelp(context);
         }
@@ -65,6 +68,7 @@ public class TakaroDebugCommand extends CommandBase {
         context.sendMessage(Message.raw("§e/takarodebug events §7- Show event registration status"));
         context.sendMessage(Message.raw("§e/takarodebug ws §7- Show WebSocket connection status"));
         context.sendMessage(Message.raw("§e/takarodebug methods §7- List server methods (console only)"));
+        context.sendMessage(Message.raw("§e/takarodebug testlink §7- Test clickable links"));
     }
 
     private void showInfo(CommandContext context) {
@@ -157,5 +161,23 @@ public class TakaroDebugCommand extends CommandBase {
             plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error listing methods: " + e.getMessage());
             context.sendMessage(Message.raw("§cError: " + e.getMessage()));
         }
+    }
+
+    private void testClickableLink(CommandContext context) {
+        // Test 1: Direct link creation (like InfoPanel does it)
+        Message linkMsg1 = Message.raw("takaro.io").link("https://takaro.io").color("#00BFFF");
+        context.sendMessage(Message.raw("Test 1 (direct): ").insert(linkMsg1));
+
+        // Test 2: Using ChatFormatter.parseColoredMessage with plain URL
+        Message parsed1 = dev.takaro.hytale.handlers.ChatFormatter.parseColoredMessage("Check out https://takaro.io for more info");
+        context.sendMessage(Message.raw("Test 2 (plain URL): ").insert(parsed1));
+
+        // Test 3: Using ChatFormatter with colored text containing URL
+        Message parsed2 = dev.takaro.hytale.handlers.ChatFormatter.parseColoredMessage("[red]Visit https://takaro.io now![-]");
+        context.sendMessage(Message.raw("Test 3 (colored URL): ").insert(parsed2));
+
+        // Test 4: Multiple URLs
+        Message parsed3 = dev.takaro.hytale.handlers.ChatFormatter.parseColoredMessage("Links: https://takaro.io and https://google.com");
+        context.sendMessage(Message.raw("Test 4 (multiple): ").insert(parsed3));
     }
 }

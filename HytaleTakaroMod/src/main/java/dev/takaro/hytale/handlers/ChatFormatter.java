@@ -141,4 +141,62 @@ public class ChatFormatter {
 
         return null;
     }
+
+    /**
+     * Parse message from Takaro with clickable links
+     * This is separate from parseColoredMessage to avoid breaking chat events
+     */
+    public static Message parseTakaroMessage(String input) {
+        if (input == null || input.isEmpty()) {
+            return Message.raw(input);
+        }
+
+        List<Message> parts = new ArrayList<>();
+
+        // Pattern to match URLs (http://, https://, or www.)
+        Pattern urlPattern = Pattern.compile("(https?://[^\\s]+|www\\.[^\\s]+)");
+        Matcher urlMatcher = urlPattern.matcher(input);
+
+        int lastEnd = 0;
+
+        while (urlMatcher.find()) {
+            // Add text before URL as plain text
+            if (urlMatcher.start() > lastEnd) {
+                String beforeText = input.substring(lastEnd, urlMatcher.start());
+                if (!beforeText.isEmpty()) {
+                    parts.add(Message.raw(beforeText));
+                }
+            }
+
+            String url = urlMatcher.group(1);
+            String linkUrl = url;
+
+            // If URL starts with www., add https:// for the link
+            if (url.startsWith("www.")) {
+                linkUrl = "https://" + url;
+            }
+
+            // Create clickable link in cyan color (keep full URL in display)
+            parts.add(Message.raw(url).link(linkUrl).color("#00BFFF"));
+
+            lastEnd = urlMatcher.end();
+        }
+
+        // Add remaining text after last URL
+        if (lastEnd < input.length()) {
+            String remainingText = input.substring(lastEnd);
+            if (!remainingText.isEmpty()) {
+                parts.add(Message.raw(remainingText));
+            }
+        }
+
+        // If no URLs found, return the whole text as one part
+        if (parts.isEmpty()) {
+            return Message.raw(input);
+        } else if (parts.size() == 1) {
+            return parts.get(0);
+        } else {
+            return Message.join(parts.toArray(new Message[0]));
+        }
+    }
 }

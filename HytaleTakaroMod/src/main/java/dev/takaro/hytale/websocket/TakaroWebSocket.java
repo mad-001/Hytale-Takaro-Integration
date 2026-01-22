@@ -186,6 +186,9 @@ public class TakaroWebSocket extends WebSocketClient {
                 reconnect();
             } catch (Exception e) {
                 plugin.getLogger().at(java.util.logging.Level.SEVERE).log(getLogPrefix() + "Reconnect failed: " + e.getMessage());
+                e.printStackTrace();
+                // Schedule another reconnect attempt
+                scheduleReconnect();
             }
         }, delayMs, TimeUnit.MILLISECONDS);
     }
