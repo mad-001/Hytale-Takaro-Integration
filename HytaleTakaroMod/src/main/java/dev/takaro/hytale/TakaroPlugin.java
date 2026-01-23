@@ -24,7 +24,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class TakaroPlugin extends JavaPlugin {
-    private static final String VERSION = "1.11.4";
+    private static final String VERSION = "1.12.2";
     private TakaroConfig config;
     private TakaroWebSocket webSocket;
     private TakaroWebSocket devWebSocket; // Optional dev Takaro connection
@@ -252,8 +252,8 @@ public class TakaroPlugin extends JavaPlugin {
             webSocket.sendGameEvent(eventType, data);
         }
         // Send to dev (if enabled and connected)
-        // Dev Takaro doesn't support log events, skip those
-        if (devWebSocket != null && !eventType.equals("log")) {
+        // Dev Takaro doesn't support log events or chat events - only send player-connected/disconnected
+        if (devWebSocket != null && !eventType.equals("log") && !eventType.equals("chat-message")) {
             devWebSocket.sendGameEvent(eventType, data);
         }
     }

@@ -32,15 +32,14 @@ public class PlayerEventListener {
             plugin.getLogger().at(java.util.logging.Level.FINE).log("[EVENT] Player connected: " + playerName);
 
             // Build connect event for Takaro
-            Map<String, Object> player = new HashMap<>();
+            Map<String, Object> eventData = new HashMap<>();
+
+            Map<String, String> player = new HashMap<>();
             player.put("name", playerName);
             player.put("gameId", uuid);
             player.put("platformId", "hytale:" + uuid);
 
-            Map<String, Object> eventData = new HashMap<>();
-            eventData.put("type", "player-connected");
             eventData.put("player", player);
-            eventData.put("msg", playerName + " joined the game");
 
             // Send to all Takaro connections (production and dev if enabled)
             plugin.sendGameEventToAll("player-connected", eventData);
@@ -73,15 +72,14 @@ public class PlayerEventListener {
             lastDisconnectTime.put(uuid, currentTime);
 
             // Build disconnect event for Takaro
-            Map<String, Object> player = new HashMap<>();
+            Map<String, Object> eventData = new HashMap<>();
+
+            Map<String, String> player = new HashMap<>();
             player.put("name", playerName);
             player.put("gameId", uuid);
             player.put("platformId", "hytale:" + uuid);
 
-            Map<String, Object> eventData = new HashMap<>();
-            eventData.put("type", "player-disconnected");
             eventData.put("player", player);
-            eventData.put("msg", playerName + " left the game");
 
             // Send to all Takaro connections (production and dev if enabled)
             plugin.sendGameEventToAll("player-disconnected", eventData);

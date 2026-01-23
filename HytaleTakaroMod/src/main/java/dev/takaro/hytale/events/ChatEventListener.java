@@ -53,16 +53,16 @@ public class ChatEventListener {
                 ChatFormatter.onPlayerChat(event);
             }
 
-            // Build chat event for Takaro
-            Map<String, Object> player = new HashMap<>();
+            // Build chat event for Takaro (don't include "type" - that's added by sendGameEvent)
+            Map<String, Object> chatData = new HashMap<>();
+            chatData.put("msg", message);
+            chatData.put("channel", "global");
+
+            Map<String, String> player = new HashMap<>();
             player.put("name", playerName);
             player.put("gameId", uuid);
             player.put("platformId", "hytale:" + uuid);
 
-            Map<String, Object> chatData = new HashMap<>();
-            chatData.put("type", "chat-message");
-            chatData.put("msg", message);
-            chatData.put("channel", "global");
             chatData.put("player", player);
 
             // Send to all Takaro connections (production and dev if enabled)

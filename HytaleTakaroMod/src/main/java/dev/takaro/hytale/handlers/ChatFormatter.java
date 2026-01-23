@@ -143,26 +143,82 @@ public class ChatFormatter {
     }
 
     /**
-     * Parse message from Takaro with clickable links
-     * This is separate from parseColoredMessage to avoid breaking chat events
+     * Parse message from Takaro with color codes AND clickable links
+     * Combines color parsing with URL detection for Takaro messages
      */
     public static Message parseTakaroMessage(String input) {
         if (input == null || input.isEmpty()) {
             return Message.raw(input);
         }
 
+        // Pattern to match [colorcode]text[-]
+        Pattern colorPattern = Pattern.compile("\\[([a-fA-F0-9]{6}|[a-zA-Z]+)\\](.*?)\\[-\\]");
+        Matcher colorMatcher = colorPattern.matcher(input);
+
+        List<Message> parts = new ArrayList<>();
+        int lastEnd = 0;
+
+        while (colorMatcher.find()) {
+            // Add text before the color code, parsing URLs
+            if (colorMatcher.start() > lastEnd) {
+                String beforeText = input.substring(lastEnd, colorMatcher.start());
+                if (!beforeText.isEmpty()) {
+                    parts.addAll(parseLinksInText(beforeText));
+                }
+            }
+
+            String colorCode = colorMatcher.group(1);
+            String coloredText = colorMatcher.group(2);
+
+            Color color = parseColor(colorCode);
+            if (color != null) {
+                // Parse URLs within colored text
+                List<Message> coloredParts = parseLinksInText(coloredText);
+                for (Message part : coloredParts) {
+                    // Apply color to each part
+                    parts.add(part.color(color));
+                }
+            } else {
+                // If color parsing failed, parse URLs in text
+                parts.addAll(parseLinksInText(coloredText));
+            }
+
+            lastEnd = colorMatcher.end();
+        }
+
+        // Add remaining text after last match, parsing URLs
+        if (lastEnd < input.length()) {
+            String remainingText = input.substring(lastEnd);
+            if (!remainingText.isEmpty()) {
+                parts.addAll(parseLinksInText(remainingText));
+            }
+        }
+
+        if (parts.isEmpty()) {
+            return Message.raw(input);
+        } else if (parts.size() == 1) {
+            return parts.get(0);
+        } else {
+            return Message.join(parts.toArray(new Message[0]));
+        }
+    }
+
+    /**
+     * Parse URLs in text and return Message parts with clickable links
+     */
+    private static List<Message> parseLinksInText(String text) {
         List<Message> parts = new ArrayList<>();
 
         // Pattern to match URLs (http://, https://, or www.)
         Pattern urlPattern = Pattern.compile("(https?://[^\\s]+|www\\.[^\\s]+)");
-        Matcher urlMatcher = urlPattern.matcher(input);
+        Matcher urlMatcher = urlPattern.matcher(text);
 
         int lastEnd = 0;
 
         while (urlMatcher.find()) {
             // Add text before URL as plain text
             if (urlMatcher.start() > lastEnd) {
-                String beforeText = input.substring(lastEnd, urlMatcher.start());
+                String beforeText = text.substring(lastEnd, urlMatcher.start());
                 if (!beforeText.isEmpty()) {
                     parts.add(Message.raw(beforeText));
                 }
@@ -176,15 +232,15 @@ public class ChatFormatter {
                 linkUrl = "https://" + url;
             }
 
-            // Create clickable link in cyan color (keep full URL in display)
+            // Create clickable link in cyan color
             parts.add(Message.raw(url).link(linkUrl).color("#00BFFF"));
 
             lastEnd = urlMatcher.end();
         }
 
         // Add remaining text after last URL
-        if (lastEnd < input.length()) {
-            String remainingText = input.substring(lastEnd);
+        if (lastEnd < text.length()) {
+            String remainingText = text.substring(lastEnd);
             if (!remainingText.isEmpty()) {
                 parts.add(Message.raw(remainingText));
             }
@@ -192,11 +248,9 @@ public class ChatFormatter {
 
         // If no URLs found, return the whole text as one part
         if (parts.isEmpty()) {
-            return Message.raw(input);
-        } else if (parts.size() == 1) {
-            return parts.get(0);
-        } else {
-            return Message.join(parts.toArray(new Message[0]));
+            parts.add(Message.raw(text));
         }
+
+        return parts;
     }
 }
