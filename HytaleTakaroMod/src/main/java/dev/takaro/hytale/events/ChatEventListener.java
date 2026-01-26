@@ -34,26 +34,46 @@ public class ChatEventListener {
 
             plugin.getLogger().at(java.util.logging.Level.INFO).log("[CHAT] " + playerName + ": " + message);
 
-            // Get player's name color from cache (set by Takaro via setPlayerNameColor action)
-            String nameColorCode = plugin.getPlayerNameColor(uuid);
-            Color nameColor = ChatFormatter.parseColor(nameColorCode);
+            // Check if message starts with configured command prefix
+            String commandPrefix = plugin.getConfig().getCommandPrefix();
+            boolean isCommand = message.startsWith(commandPrefix);
 
-            if (nameColor != null) {
-                // Apply custom name color
-                Message formattedMessage = ChatFormatter.parseColoredMessage(message);
-                event.setFormatter((playerRef, msg) ->
-                    Message.join(
-                        Message.raw(playerName).color(nameColor),
-                        Message.raw(": "),
-                        formattedMessage
-                    )
-                );
+            if (isCommand) {
+                // Cancel the event so command doesn't appear in chat (like Hytale's /commands)
+                event.setCancelled(true);
+
+                // Send private confirmation message to player
+                String commandResponse = plugin.getConfig().getCommandResponse();
+                String command = message.substring(commandPrefix.length()); // Extract command without prefix
+                String formattedResponse = commandResponse
+                    .replace("{prefix}", commandPrefix)
+                    .replace("{command}", command);
+
+                Message responseMessage = ChatFormatter.parseColoredMessage(formattedResponse);
+                event.getSender().sendMessage(responseMessage);
             } else {
-                // No custom color - use default formatting
-                ChatFormatter.onPlayerChat(event);
+                // Not a command - apply name color formatting for regular chat
+                // Get player's name color from cache (set by Takaro via setPlayerNameColor action)
+                String nameColorCode = plugin.getPlayerNameColor(uuid);
+                Color nameColor = ChatFormatter.parseColor(nameColorCode);
+
+                if (nameColor != null) {
+                    // Apply custom name color
+                    Message formattedMessage = ChatFormatter.parseColoredMessage(message);
+                    event.setFormatter((playerRef, msg) ->
+                        Message.join(
+                            Message.raw(playerName).color(nameColor),
+                            Message.raw(": "),
+                            formattedMessage
+                        )
+                    );
+                } else {
+                    // No custom color - use default formatting
+                    ChatFormatter.onPlayerChat(event);
+                }
             }
 
-            // Build chat event for Takaro (don't include "type" - that's added by sendGameEvent)
+            // Send ALL messages to Takaro (commands AND regular chat)
             Map<String, Object> chatData = new HashMap<>();
             chatData.put("msg", message);
             chatData.put("channel", "global");
@@ -67,7 +87,7 @@ public class ChatEventListener {
 
             // Send to all Takaro connections (production and dev if enabled)
             plugin.sendGameEventToAll("chat-message", chatData);
-            plugin.getLogger().at(java.util.logging.Level.FINE).log("Forwarded chat message to Takaro");
+            plugin.getLogger().at(java.util.logging.Level.FINE).log("Forwarded to Takaro: " + message);
 
         } catch (Exception e) {
             plugin.getLogger().at(java.util.logging.Level.SEVERE).log("Error handling chat event: " + e.getMessage());

@@ -28,6 +28,8 @@ public class TakaroConfig {
     private void createDefault() {
         properties.setProperty("IDENTITY_TOKEN", "MyHytaleServer");
         properties.setProperty("REGISTRATION_TOKEN", "");
+        properties.setProperty("COMMAND_PREFIX", "!");
+        properties.setProperty("COMMAND_RESPONSE", "[cyan]Command[-] [green]{prefix}{command}[-]");
 
         try {
             configFile.getParentFile().mkdirs();
@@ -37,6 +39,8 @@ public class TakaroConfig {
                     "# Production Takaro Configuration:\n" +
                     "# IDENTITY_TOKEN: Choose a name for your server (e.g., MyHytaleServer, SurvivalServer, etc.)\n" +
                     "# REGISTRATION_TOKEN: Get this from Takaro dashboard (Settings → Game Servers → Add Server → Generic)\n" +
+                    "# COMMAND_PREFIX: Prefix for Takaro commands (default: !). Change to ., -, or any custom prefix (do not use / - reserved by Hytale).\n" +
+                    "# COMMAND_RESPONSE: Private message sent when command received. Use {prefix} and {command} placeholders. Supports color codes like [cyan]text[-].\n" +
                     "# \n" +
                     "# Optional: Dev Takaro Configuration (for developers only):\n" +
                     "# DEV_ENABLED=true\n" +
@@ -85,5 +89,13 @@ public class TakaroConfig {
 
     public String getDevRegistrationToken() {
         return properties.getProperty("DEV_REGISTRATION_TOKEN", "");
+    }
+
+    public String getCommandPrefix() {
+        return properties.getProperty("COMMAND_PREFIX", "!");
+    }
+
+    public String getCommandResponse() {
+        return properties.getProperty("COMMAND_RESPONSE", "[cyan]Command[-] [green]{prefix}{command}[-]");
     }
 }

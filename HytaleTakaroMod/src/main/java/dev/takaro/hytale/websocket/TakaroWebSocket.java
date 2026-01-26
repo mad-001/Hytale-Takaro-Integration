@@ -60,9 +60,7 @@ public class TakaroWebSocket extends WebSocketClient {
                     sendPong();
                     break;
                 case "error":
-                    plugin.getLogger().at(java.util.logging.Level.SEVERE).log(getLogPrefix() + "Error: " + json.toString());
-                    // DO NOT auto-reconnect on error - causes infinite loop
-                    // Just log the error and let the connection stay open
+                    handleError(json);
                     break;
                 default:
                     plugin.getLogger().at(java.util.logging.Level.WARNING).log("Unknown message type from Takaro: " + type);
@@ -129,6 +127,28 @@ public class TakaroWebSocket extends WebSocketClient {
 
         // Delegate to plugin's request handler, passing this WebSocket for response
         plugin.handleTakaroRequest(this, requestId, action, payload);
+    }
+
+    private void handleError(JsonObject message) {
+        plugin.getLogger().at(java.util.logging.Level.SEVERE).log(getLogPrefix() + "Error: " + message.toString());
+
+        // Check if this is the "Internal error handling game event" error
+        if (message.has("payload")) {
+            JsonObject payload = message.getAsJsonObject("payload");
+            if (payload.has("message")) {
+                String errorMessage = payload.get("message").getAsString();
+                if ("Internal error handling game event".equals(errorMessage)) {
+                    plugin.getLogger().at(java.util.logging.Level.WARNING).log(getLogPrefix() + "Detected internal error - reconnecting with fresh connection");
+                    // Close and reconnect with fresh websocket connection
+                    // This will trigger onClose() which will call scheduleReconnect()
+                    // The reconnect will send fresh identify with ID and registration tokens
+                    close();
+                    return;
+                }
+            }
+        }
+
+        // For other errors, just log and stay connected
     }
 
     private void sendPong() {
