@@ -2,8 +2,12 @@ package dev.takaro.hytale.events;
 
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
+import com.hypixel.hytale.server.core.io.netty.NettyUtil;
 import dev.takaro.hytale.TakaroPlugin;
+import io.netty.channel.Channel;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,7 +33,19 @@ public class PlayerEventListener {
             String playerName = event.getPlayerRef().getUsername();
             String uuid = event.getPlayerRef().getUuid().toString();
 
-            plugin.getLogger().at(java.util.logging.Level.FINE).log("[EVENT] Player connected: " + playerName);
+            // Get player IP address
+            String ipAddress = "127.0.0.1"; // Default fallback
+            try {
+                Channel channel = event.getPlayerRef().getPacketHandler().getChannel();
+                SocketAddress remoteAddress = NettyUtil.getRemoteSocketAddress(channel);
+                if (remoteAddress instanceof InetSocketAddress) {
+                    ipAddress = ((InetSocketAddress) remoteAddress).getAddress().getHostAddress();
+                }
+            } catch (Exception e) {
+                plugin.getLogger().at(java.util.logging.Level.WARNING).log("Could not get IP for player " + playerName + ": " + e.getMessage());
+            }
+
+            plugin.getLogger().at(java.util.logging.Level.FINE).log("[EVENT] Player connected: " + playerName + " from " + ipAddress);
 
             // Build connect event for Takaro
             Map<String, Object> eventData = new HashMap<>();
@@ -38,6 +54,7 @@ public class PlayerEventListener {
             player.put("name", playerName);
             player.put("gameId", uuid);
             player.put("platformId", "hytale:" + uuid);
+            player.put("ip", ipAddress);
 
             eventData.put("player", player);
 
