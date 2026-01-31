@@ -34,7 +34,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class TakaroPlugin extends JavaPlugin {
-    private static final String VERSION = "1.14.4";
+    private static final String VERSION = "1.14.5";
     private static final String HYTALECHARTS_API_URL = "https://hytalecharts.com/api/heartbeat";
     private static final int HEARTBEAT_INTERVAL_SECONDS = 300; // 5 minutes
 
@@ -389,7 +389,7 @@ public class TakaroPlugin extends JavaPlugin {
             body.addProperty("secret", config.getHytaleChartsSecret());
             body.addProperty("player_count", playerCount);
             body.addProperty("max_players", maxPlayers);
-            body.addProperty("version", VERSION);
+            body.addProperty("version", VERSION + "-takaro");
 
             // Include player list with usernames, UUIDs, and worlds
             body.add("players", buildPlayerList());
