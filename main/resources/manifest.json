@@ -1,0 +1,14 @@
+{
+    "Group": "HytaleCharts",
+    "Name": "HytaleCharts",
+    "Version": "1.0.0",
+    "Authors": [
+        {
+            "Name": "HytaleCharts",
+            "Url": "https://hytalecharts.com"
+        }
+    ],
+    "Website": "https://hytalecharts.com",
+    "Main": "com.hytalecharts.plugin.HytaleChartsPlugin",
+    "ServerVersion": "*"
+}
