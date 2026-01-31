@@ -43,7 +43,7 @@ mvn clean package
 cp target/HytaleTakaroMod-X.X.X.jar /path/to/hytale/mods/
 
 # 3. Start server to generate config
-# Config will be created at: mods/HytaleTakaroMod/TakaroConfig.properties
+# Config will be created at: mods/TakaroConfig.properties
 
 # 4. Edit config with your tokens
 # IDENTITY_TOKEN, REGISTRATION_TOKEN, HYTALECHARTS_SECRET (optional)
@@ -106,7 +106,7 @@ mvn clean package
 1. Build the plugin as described above
 2. Copy `target/HytaleTakaroMod-X.X.X.jar` to your Hytale server's `mods` directory
 3. Start your Hytale server (config will be auto-generated)
-4. Edit the generated `mods/HytaleTakaroMod/TakaroConfig.properties` file:
+4. Edit the generated `mods/TakaroConfig.properties` file:
    ```properties
    # Takaro Settings (required)
    IDENTITY_TOKEN=MyHytaleServer
@@ -129,7 +129,7 @@ mvn clean package
 
 ## Configuration
 
-The configuration file is automatically created at `mods/HytaleTakaroMod/TakaroConfig.properties`:
+The configuration file is automatically created at `mods/TakaroConfig.properties`:
 
 **Takaro Settings:**
 - `IDENTITY_TOKEN`: Your Takaro identity token (required) - Choose a name for your server
