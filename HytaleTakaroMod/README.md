@@ -9,6 +9,22 @@ A Hytale server plugin that integrates with Takaro for server management, chat r
 
 > **Note**: This plugin runs **inside** the Hytale server process (not as a separate bridge). Players don't need to install anything client-side.
 
+## 🎯 Put Your Server on the Billboards!
+
+> **✨ NEW: HytaleCharts Integration Built-In!**
+>
+> This mod now includes **HytaleCharts** integration for automatic server status reporting and player tracking. Get your server listed on the public server directory and attract more players!
+>
+> **📊 [Get started at HytaleCharts.com →](https://hytalecharts.com/)**
+>
+> Features:
+> - 📈 **Automatic heartbeat** - Server status updates every 5 minutes
+> - 👥 **Player tracking** - Live player count and online player lists
+> - 🔗 **Promotional links** - Customizable clickable messages for players
+> - 📣 **Server visibility** - Get discovered by new players
+>
+> Simply add your `HYTALECHARTS_SECRET` to the config (see [Configuration](#configuration) below)!
+
 ## 📚 Documentation
 
 - **[Installation Guide](#installation)** - How to set up the plugin
@@ -24,12 +40,15 @@ A Hytale server plugin that integrates with Takaro for server management, chat r
 mvn clean package
 
 # 2. Copy to your Hytale server
-cp target/HytaleTakaroMod-1.0.0.jar /path/to/hytale/plugins/
+cp target/HytaleTakaroMod-X.X.X.jar /path/to/hytale/mods/
 
-# 3. Start server and edit config
-# Edit: plugins/TakaroPlugin/config.properties
+# 3. Start server to generate config
+# Config will be created at: mods/HytaleTakaroMod/TakaroConfig.properties
 
-# 4. Restart server
+# 4. Edit config with your tokens
+# IDENTITY_TOKEN, REGISTRATION_TOKEN, HYTALECHARTS_SECRET (optional)
+
+# 5. Restart server
 ```
 
 ## Features
@@ -41,6 +60,14 @@ cp target/HytaleTakaroMod-1.0.0.jar /path/to/hytale/plugins/
 - Server command execution
 - Player management (kick, ban, teleport)
 - Server info reporting
+- Customizable command prefix and response messages
+
+**HytaleCharts Integration:**
+- Automatic heartbeat to HytaleCharts.com (every 5 minutes)
+- Real-time player count and max players reporting
+- Online player list with usernames, UUIDs, and worlds
+- Configurable promotional link system (on-login and periodic broadcasts)
+- Server visibility on public server directory
 
 **Hytale First-Party API Integration:**
 - UUID ↔ Name lookups (single and bulk)
@@ -77,28 +104,58 @@ mvn clean package
 ## Installation
 
 1. Build the plugin as described above
-2. Copy `target/HytaleTakaroMod-1.0.0.jar` to your Hytale server's `plugins` directory
-3. Start your Hytale server
-4. Edit the generated `plugins/TakaroPlugin/config.properties` file:
+2. Copy `target/HytaleTakaroMod-X.X.X.jar` to your Hytale server's `mods` directory
+3. Start your Hytale server (config will be auto-generated)
+4. Edit the generated `mods/HytaleTakaroMod/TakaroConfig.properties` file:
    ```properties
-   TAKARO_WS_URL=wss://connect.next.takaro.dev/
-   IDENTITY_TOKEN=your_identity_token_here
+   # Takaro Settings (required)
+   IDENTITY_TOKEN=MyHytaleServer
    REGISTRATION_TOKEN=your_registration_token_here
+   COMMAND_PREFIX=!
+   COMMAND_RESPONSE=[cyan]Command Received[-] [green]{prefix}{command}[-]
+
+   # HytaleCharts (optional - get your secret at hytalecharts.com)
+   HYTALECHARTS_SECRET=your_secret_here
+   HYTALECHARTS_DEBUG=false
+   HYTALECHARTS_PROMO_ON_LOGIN=true
+   HYTALECHARTS_PROMO_ENABLED=false
    ```
 5. Restart your Hytale server
+6. **(Optional)** Set up HytaleCharts:
+   - Visit [hytalecharts.com](https://hytalecharts.com/)
+   - Generate a heartbeat secret
+   - Add it to `HYTALECHARTS_SECRET` in your config
+   - Restart to start sending heartbeats!
 
 ## Configuration
 
-The configuration file is automatically created at `plugins/TakaroPlugin/config.properties`:
+The configuration file is automatically created at `mods/HytaleTakaroMod/TakaroConfig.properties`:
 
 **Takaro Settings:**
-- `TAKARO_WS_URL`: WebSocket URL for Takaro connection (default: `wss://connect.next.takaro.dev/`)
-- `IDENTITY_TOKEN`: Your Takaro identity token (required)
-- `REGISTRATION_TOKEN`: Your Takaro registration token (optional)
+- `IDENTITY_TOKEN`: Your Takaro identity token (required) - Choose a name for your server
+- `REGISTRATION_TOKEN`: Your Takaro registration token (get from Takaro dashboard)
+- `COMMAND_PREFIX`: Prefix for Takaro commands (default: `!`) - Can be changed to `.`, `-`, etc. (do not use `/` - reserved by Hytale)
+- `COMMAND_RESPONSE`: Private message sent when command received. Use `{prefix}` and `{command}` placeholders. Supports color codes like `[cyan]text[-]`.
+  - Example: `[cyan]Command Received[-] [green]{prefix}{command}[-]`
 
-**Hytale API Settings:**
+**HytaleCharts Integration:**
+- `HYTALECHARTS_SECRET`: Your heartbeat secret from [hytalecharts.com](https://hytalecharts.com/) (required to enable)
+- `HYTALECHARTS_DEBUG`: Enable debug logging (default: `false`)
+- `HYTALECHARTS_PROMO_ON_LOGIN`: Send promo link when player joins (default: `true`)
+- `HYTALECHARTS_PROMO_ENABLED`: Enable periodic promo link broadcasts (default: `false`)
+- `HYTALECHARTS_PROMO_INTERVAL_MINUTES`: How often to broadcast promo link in minutes (default: `15`)
+- `HYTALECHARTS_PROMO_PREFIX`: Prefix before promo message (default: `[hytalecharts.com] `)
+- `HYTALECHARTS_PROMO_MESSAGE`: Promo link message text (default: `Vote for our server on HytaleCharts!`)
+- `HYTALECHARTS_PROMO_URL`: URL for the clickable link (default: `https://hytalecharts.com`)
+
+**Hytale API Settings (Optional):**
 - `HYTALE_API_URL`: Hytale first-party API URL (default: `https://api.hytale.com`)
 - `HYTALE_API_TOKEN`: Your authenticated server token from Hytale (required for API features)
+
+**Dev Takaro (Optional - for developers only):**
+- `DEV_ENABLED`: Enable secondary dev Takaro connection (default: `false`)
+- `DEV_IDENTITY_TOKEN`: Dev server identity token
+- `DEV_REGISTRATION_TOKEN`: Dev server registration token
 
 ## Architecture
 
