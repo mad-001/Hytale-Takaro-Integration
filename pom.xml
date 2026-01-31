@@ -6,7 +6,7 @@
 
     <groupId>dev.takaro</groupId>
     <artifactId>HytaleTakaroMod</artifactId>
-    <version>1.12.8</version>
+    <version>1.0.0</version>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -47,15 +47,6 @@
     </dependencies>
 
     <build>
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-                <targetPath>.</targetPath>
-                <includes>
-                    <include>manifest.json</include>
-                </includes>
-            </resource>
-        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

@@ -4,41 +4,29 @@ import com.google.gson.JsonObject;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
-import com.hypixel.hytale.logger.backend.HytaleLoggerBackend;
 import dev.takaro.hytale.api.HytaleApiClient;
 import dev.takaro.hytale.commands.TakaroDebugCommand;
 import dev.takaro.hytale.config.TakaroConfig;
 import dev.takaro.hytale.events.ChatEventListener;
-import dev.takaro.hytale.events.PlayerDeathSystem;
 import dev.takaro.hytale.events.PlayerEventListener;
-import dev.takaro.hytale.events.TakaroLogHandler;
 import dev.takaro.hytale.handlers.TakaroRequestHandler;
 import dev.takaro.hytale.websocket.TakaroWebSocket;
 
 import javax.annotation.Nonnull;
 import java.io.File;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class TakaroPlugin extends JavaPlugin {
-    private static final String VERSION = "1.12.8";
+    private static final String VERSION = "1.0.0";
     private TakaroConfig config;
     private TakaroWebSocket webSocket;
-    private TakaroWebSocket devWebSocket; // Optional dev Takaro connection
     private TakaroRequestHandler requestHandler;
-    private HytaleApiClient hytaleApi; // Hidden feature - not in user config yet
+    private HytaleApiClient hytaleApi;
     private ChatEventListener chatListener;
     private PlayerEventListener playerListener;
-    private PlayerDeathSystem deathSystem;
-    private TakaroLogHandler logHandler;
     private ScheduledExecutorService telemetryScheduler;
-
-    // Cache for player name colors (UUID -> color code)
-    // Set by Takaro via setPlayerNameColor action
-    private final ConcurrentHashMap<String, String> playerNameColors = new ConcurrentHashMap<>();
 
     public TakaroPlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -48,15 +36,17 @@ public class TakaroPlugin extends JavaPlugin {
     protected void setup() {
         getLogger().at(java.util.logging.Level.INFO).log("Hytale-Takaro Integration v" + VERSION + " initializing...");
 
-        // Load configuration - store in mods folder directly, not in subdirectory
-        File configFile = getFile().getParent().resolve("TakaroConfig.properties").toFile();
+        // Load configuration
+        File configFile = getDataDirectory().resolve("config.properties").toFile();
         config = new TakaroConfig(configFile);
 
-        // Initialize Hytale API client (hidden feature - optional)
+        // Initialize Hytale API client
         hytaleApi = new HytaleApiClient(this, config.getHytaleApiUrl());
         if (!config.getHytaleApiToken().isEmpty()) {
             hytaleApi.setAuthToken(config.getHytaleApiToken());
             getLogger().at(java.util.logging.Level.INFO).log("Hytale API client initialized");
+        } else {
+            getLogger().at(java.util.logging.Level.WARNING).log("No Hytale API token configured - some features may be limited");
         }
 
         // Initialize request handler
@@ -65,17 +55,9 @@ public class TakaroPlugin extends JavaPlugin {
         // Initialize event listeners
         chatListener = new ChatEventListener(this);
         playerListener = new PlayerEventListener(this);
-        deathSystem = new PlayerDeathSystem(this);
-        logHandler = new TakaroLogHandler(this);
 
         // Register events (official pattern)
         registerEvents();
-
-        // Register ECS systems
-        registerEcsSystems();
-
-        // Subscribe to Hytale's logging system
-        HytaleLoggerBackend.subscribe(logHandler.getLogBuffer());
 
         // Register debug command (official pattern)
         HytaleServer.get().getCommandManager().register(new TakaroDebugCommand(this));
@@ -116,38 +98,13 @@ public class TakaroPlugin extends JavaPlugin {
         }
     }
 
-    /**
-     * Register ECS systems using official Hytale pattern
-     */
-    private void registerEcsSystems() {
-        try {
-            // Register player death system with entity store registry
-            this.getEntityStoreRegistry().registerSystem(deathSystem);
-            getLogger().at(java.util.logging.Level.INFO).log("Registered PlayerDeathSystem");
-
-        } catch (Exception e) {
-            getLogger().at(java.util.logging.Level.SEVERE).log("Failed to register ECS systems: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
     @Override
     protected void start() {
         super.start();
         getLogger().at(java.util.logging.Level.INFO).log("Starting Takaro WebSocket connection...");
 
-        // Check if items are loaded
         try {
-            com.hypixel.hytale.server.core.asset.type.item.config.Item.getAssetMap();
-            int itemCount = com.hypixel.hytale.server.core.asset.type.item.config.Item.getAssetMap().getAssetMap().size();
-            getLogger().at(java.util.logging.Level.INFO).log("Items loaded: " + itemCount + " items available");
-        } catch (Exception e) {
-            getLogger().at(java.util.logging.Level.WARNING).log("Could not check items at startup: " + e.getMessage());
-        }
-
-        // Connect to production Takaro
-        try {
-            webSocket = new TakaroWebSocket(this, config, false); // false = production
+            webSocket = new TakaroWebSocket(this, config);
             webSocket.connect();
             getLogger().at(java.util.logging.Level.INFO).log("Connecting to Takaro at " + config.getWsUrl());
         } catch (Exception e) {
@@ -155,27 +112,12 @@ public class TakaroPlugin extends JavaPlugin {
             e.printStackTrace();
         }
 
-        // Connect to dev Takaro (if enabled)
-        if (config.isDevEnabled()) {
-            try {
-                devWebSocket = new TakaroWebSocket(this, config, true); // true = dev
-                devWebSocket.connect();
-                getLogger().at(java.util.logging.Level.INFO).log("Connecting to Dev Takaro at " + config.getDevWsUrl());
-            } catch (Exception e) {
-                getLogger().at(java.util.logging.Level.SEVERE).log("Failed to start Dev WebSocket connection: " + e.getMessage());
-                e.printStackTrace();
-            }
-        }
-
-        // Start telemetry reporting to Hytale API (optional - only if token configured)
+        // Start telemetry reporting to Hytale API (every 5 minutes)
         if (!config.getHytaleApiToken().isEmpty()) {
             telemetryScheduler = Executors.newSingleThreadScheduledExecutor();
             telemetryScheduler.scheduleAtFixedRate(this::reportTelemetry, 1, 5, TimeUnit.MINUTES);
             getLogger().at(java.util.logging.Level.INFO).log("Started Hytale telemetry reporting");
         }
-
-        // Start log forwarding to Takaro
-        logHandler.start();
     }
 
     private void reportTelemetry() {
@@ -199,11 +141,6 @@ public class TakaroPlugin extends JavaPlugin {
         super.shutdown();
         getLogger().at(java.util.logging.Level.INFO).log("Shutting down Takaro integration...");
 
-        if (logHandler != null) {
-            HytaleLoggerBackend.unsubscribe(logHandler.getLogBuffer());
-            logHandler.stop();
-        }
-
         if (telemetryScheduler != null) {
             telemetryScheduler.shutdownNow();
         }
@@ -212,25 +149,17 @@ public class TakaroPlugin extends JavaPlugin {
             webSocket.shutdown();
         }
 
-        if (devWebSocket != null) {
-            devWebSocket.shutdown();
-        }
-
         if (hytaleApi != null) {
             hytaleApi.shutdown();
         }
     }
 
-    public void handleTakaroRequest(TakaroWebSocket sourceWebSocket, String requestId, String action, JsonObject payload) {
-        requestHandler.handleRequest(sourceWebSocket, requestId, action, payload);
+    public void handleTakaroRequest(String requestId, String action, JsonObject payload) {
+        requestHandler.handleRequest(requestId, action, payload);
     }
 
     public TakaroWebSocket getWebSocket() {
         return webSocket;
-    }
-
-    public TakaroWebSocket getDevWebSocket() {
-        return devWebSocket;
     }
 
     public TakaroConfig getConfig() {
@@ -239,47 +168,5 @@ public class TakaroPlugin extends JavaPlugin {
 
     public String getVersion() {
         return VERSION;
-    }
-
-    /**
-     * Send game event to all active Takaro connections (production and dev if enabled)
-     * @param eventType Type of event
-     * @param data Event data
-     */
-    public void sendGameEventToAll(String eventType, Map<String, Object> data) {
-        // Send to production
-        if (webSocket != null) {
-            webSocket.sendGameEvent(eventType, data);
-        }
-        // Send to dev (if enabled and connected)
-        // Dev Takaro doesn't support log events or chat events - only send player-connected/disconnected
-        if (devWebSocket != null && !eventType.equals("log") && !eventType.equals("chat-message")) {
-            devWebSocket.sendGameEvent(eventType, data);
-        }
-    }
-
-    /**
-     * Get a player's name color from cache
-     * @param uuid Player UUID
-     * @return Color code (e.g., "gold", "ff0000") or null if not set
-     */
-    public String getPlayerNameColor(String uuid) {
-        return playerNameColors.get(uuid);
-    }
-
-    /**
-     * Set a player's name color in cache
-     * Called by Takaro via setPlayerNameColor action
-     * @param uuid Player UUID
-     * @param colorCode Color code (e.g., "gold", "ff0000")
-     */
-    public void setPlayerNameColor(String uuid, String colorCode) {
-        if (colorCode == null || colorCode.isEmpty()) {
-            playerNameColors.remove(uuid);
-            getLogger().at(java.util.logging.Level.INFO).log("Removed name color for player: " + uuid);
-        } else {
-            playerNameColors.put(uuid, colorCode);
-            getLogger().at(java.util.logging.Level.INFO).log("Set name color for player " + uuid + ": " + colorCode);
-        }
     }
 }
