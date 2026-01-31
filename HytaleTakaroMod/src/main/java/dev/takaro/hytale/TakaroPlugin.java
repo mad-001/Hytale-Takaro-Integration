@@ -24,7 +24,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class TakaroPlugin extends JavaPlugin {
-    private static final String VERSION = "1.12.8";
+    private static final String VERSION = "1.12.9";
     private TakaroConfig config;
     private TakaroWebSocket webSocket;
     private TakaroWebSocket devWebSocket; // Optional dev Takaro connection

@@ -54,9 +54,9 @@ public class PlayerEventListener {
             player.put("name", playerName);
             player.put("gameId", uuid);
             player.put("platformId", "hytale:" + uuid);
-            player.put("ip", ipAddress);
 
             eventData.put("player", player);
+            eventData.put("ip", ipAddress); // IP at root level, not in player object
 
             // Send to all Takaro connections (production and dev if enabled)
             plugin.sendGameEventToAll("player-connected", eventData);
