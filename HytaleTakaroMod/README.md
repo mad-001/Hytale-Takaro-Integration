@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Java](https://img.shields.io/badge/Java-24+-orange.svg)](https://adoptium.net/)
 [![Hytale](https://img.shields.io/badge/Hytale-Server%20Plugin-blue.svg)](https://hytale.com/)
-[![Takaro](https://img.shields.io/badge/Takaro-Integration-green.svg)](https://takaro.dev/)
+[![Takaro](https://img.shields.io/badge/Takaro-Integration-green.svg)](https://takaro.io?via=zach550)
 
 A Hytale server plugin that integrates with Takaro for server management, chat relay, and player tracking.
 
