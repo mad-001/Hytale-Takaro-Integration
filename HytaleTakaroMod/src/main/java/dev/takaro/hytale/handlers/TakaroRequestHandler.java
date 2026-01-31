@@ -158,7 +158,19 @@ public class TakaroRequestHandler {
                 playerData.put("name", player.getUsername());
                 playerData.put("gameId", uuid);
                 playerData.put("platformId", "hytale:" + uuid);
-                playerData.put("ip", "127.0.0.1"); // IP not directly accessible via API
+
+                // Extract real IP from player connection
+                String ipAddress = "127.0.0.1";
+                try {
+                    io.netty.channel.Channel channel = player.getPacketHandler().getChannel();
+                    java.net.SocketAddress remoteAddress = com.hypixel.hytale.server.core.io.netty.NettyUtil.getRemoteSocketAddress(channel);
+                    if (remoteAddress instanceof java.net.InetSocketAddress) {
+                        ipAddress = ((java.net.InetSocketAddress) remoteAddress).getAddress().getHostAddress();
+                    }
+                } catch (Exception e) {
+                    // Keep default 127.0.0.1
+                }
+                playerData.put("ip", ipAddress);
                 return playerData;
             }).collect(Collectors.toList());
 
@@ -235,9 +247,21 @@ public class TakaroRequestHandler {
             String uuid = playerRef.getUuid().toString();
             Map<String, Object> playerData = new HashMap<>();
             playerData.put("name", playerRef.getUsername());
-            playerData.put("gameId", uuid);  // Must be a string!
+            playerData.put("gameId", uuid);
             playerData.put("platformId", "hytale:" + uuid);
-            playerData.put("ip", "127.0.0.1");
+
+            // Extract real IP from player connection
+            String ipAddress = "127.0.0.1";
+            try {
+                io.netty.channel.Channel channel = playerRef.getPacketHandler().getChannel();
+                java.net.SocketAddress remoteAddress = com.hypixel.hytale.server.core.io.netty.NettyUtil.getRemoteSocketAddress(channel);
+                if (remoteAddress instanceof java.net.InetSocketAddress) {
+                    ipAddress = ((java.net.InetSocketAddress) remoteAddress).getAddress().getHostAddress();
+                }
+            } catch (Exception e) {
+                // Keep default 127.0.0.1
+            }
+            playerData.put("ip", ipAddress);
 
             return playerData;
 
