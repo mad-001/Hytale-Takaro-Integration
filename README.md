@@ -32,10 +32,10 @@ This mod connects your Hytale server to Takaro, giving you:
 
 ### Prerequisites
 - Hytale dedicated server
-- [Takaro account](https://takaro.io?via=zach550) (free)
+- [Takaro account](https://takaro.io/pricing/?via=zach550) (free)
 
 ### Get a Takaro Account
-1. Go to [Takaro](https://takaro.io?via=zach550) and fill out the survey
+1. Go to [Takaro](https://takaro.io/pricing/?via=zach550) and fill out the survey
 2. Join [Discord](https://discord.gg/pwenDRrtnA) and ask for an invite
 
 ### Server Setup
@@ -54,7 +54,7 @@ REGISTRATION_TOKEN=GET_THIS_FROM_THE_DIRECTIONS_BELOW
 ```
 
 **Where to get tokens:**
-1. Go to your [Takaro dashboard](https://takaro.io?via=zach550)
+1. Go to your [Takaro dashboard](https://takaro.io/pricing/?via=zach550)
 2. Navigate to Settings → Game Servers
 3. Click "Add Game Server"
 4. Select "Generic" as the game type
@@ -70,7 +70,7 @@ Start your Hytale server and the mod will automatically connect to Takaro!
 - **Documentation**: [Takaro Docs](https://docs.takaro.io)
 
 ## Links
-- **Takaro Platform**: https://takaro.io?via=zach550
+- **Takaro Platform**: https://takaro.io/pricing/?via=zach550
 - **Source Code**: https://github.com/mad-001/Hytale-Takaro-Integration
 - **Takaro Documentation**: https://docs.takaro.io
 

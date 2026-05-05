@@ -181,5 +181,5 @@ All notable features added to the Hytale-Takaro Integration Mod.
 ## Links
 
 - [GitHub Repository](https://github.com/yourusername/Hytale-Takaro-Integration)
-- [Takaro Platform](https://takaro.io/?via=zach550)
+- [Takaro Platform](https://takaro.io/pricing/?via=zach550)
 - [Hytale Website](https://hytale.com/)
